@@ -8,6 +8,9 @@
 "settings.defaultAction" = "Default Action";
 "defaultAction.copy" = "Copy to Clipboard";
 "defaultAction.paste" = "Direct Paste";
+"settings.defaultTextFormat" = "Default Format";
+"textFormat.plain" = "Plain Text";
+"textFormat.formatted" = "Keep Formatting";
 "settings.retentionDays" = "Retention Days";
 "settings.maxItems" = "Max Items";
 "settings.appLanguage" = "App Language";
@@ -25,6 +28,7 @@
 "settings.panel.cornerRadius" = "Panel Corner Radius";
 "shortcuts.title" = "Shortcuts";
 "shortcuts.panel" = "Panel";
+"shortcuts.recording" = "Press new shortcut…";
 "about.title" = "About";
 "about.text" = "Open-source. Focused on simple, beautiful, and smooth experience.";
 "language.zh" = "Chinese";
@@ -41,6 +45,7 @@
 
 "toast.copiedPlain" = "Copied as plain text";
 "toast.copied" = "Copied to clipboard";
+"toast.copiedFormatted" = "Copied with formatting";
 "toast.addedToBoard" = "Added to board";
 "toast.deleted" = "Deleted";
 "permission.inputMonitoring" = "Input monitoring permission required";
@@ -50,6 +55,8 @@
 "timeline.rename.cancel" = "Cancel";
 "timeline.count.chars" = "chars";
 "timeline.help.copy" = "Copy to clipboard";
+"timeline.help.copyPlain" = "Copy as plain text";
+"timeline.help.copyFormatted" = "Copy with formatting";
 "timeline.help.directPaste" = "Derect Paste";
 "timeline.help.pastePlain" = "Paste as plain text";
 "timeline.help.delete" = "Delete";
@@ -77,6 +84,11 @@
 "panel.selection.deleteSelected" = "Delete selected";
 "panel.selection.addToBoard" = "Add to board";
 "panel.selection.clearSelection" = "Clear selection";
+"panel.enterAction.copy" = "Copy";
+"panel.enterAction.paste" = "Direct Paste";
+"panel.enterFormat.plain" = "Plain Text";
+"panel.enterFormat.formatted" = "Keep Formatting";
+"panel.enterAction.help" = "Enter uses defaults; Shift+Enter forces plain text; Option+Enter keeps formatting";
 
 "boards.default.displayName" = "Clipboard";
 "preview.json.format" = "Format JSON";

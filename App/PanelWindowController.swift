@@ -29,7 +29,7 @@ public final class PanelWindowController: NSObject, NSWindowDelegate, NSTextFiel
     public var onArrowRight: (() -> Void)?
     public var onArrowUp: (() -> Void)?
     public var onArrowDown: (() -> Void)?
-    public var onEnter: (() -> Void)?
+    public var onEnter: ((TextFormatMode?) -> Void)?
     public var onSpace: (() -> Void)?
     public var onShown: (() -> Void)?
     public var onQuickPaste: ((Int, Bool) -> Void)?
@@ -125,7 +125,6 @@ public final class PanelWindowController: NSObject, NSWindowDelegate, NSTextFiel
     private func targetOrigin(for size: NSSize) -> NSPoint {
         let s = activeScreen() ?? NSScreen.main
         guard let screen = s else { return NSPoint(x: 0, y: 0) }
-        let visible = screen.visibleFrame
         let whole = screen.frame
         let menuOffset = NSStatusBar.system.thickness
         let raw = UserDefaults.standard.string(forKey: "historyLayoutStyle") ?? "horizontal"
@@ -266,7 +265,7 @@ public final class PanelWindowController: NSObject, NSWindowDelegate, NSTextFiel
             self.previousFrontApp = nil
             if let app = prev, app.processIdentifier != NSRunningApplication.current.processIdentifier {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
-                    app.activate(options: [.activateIgnoringOtherApps])
+                    app.activate(options: [])
                 }
             }
         }
@@ -288,7 +287,7 @@ public final class PanelWindowController: NSObject, NSWindowDelegate, NSTextFiel
         let newH = targetHeight()
         let newSize = NSSize(width: newW, height: newH)
         let newOrigin = targetOrigin(for: newSize)
-        var f = NSRect(origin: newOrigin, size: newSize)
+        let f = NSRect(origin: newOrigin, size: newSize)
         if animated {
             NSAnimationContext.runAnimationGroup { ctx in
                 ctx.duration = 0.12
@@ -378,7 +377,18 @@ public final class PanelWindowController: NSObject, NSWindowDelegate, NSTextFiel
                     if keycode == 124 { self.onArrowRight?(); return nil }
                     if keycode == 126 { self.onArrowUp?(); return nil }
                     if keycode == 125 { self.onArrowDown?(); return nil }
-                    if keycode == 36 || keycode == 76 { self.onEnter?(); return nil }
+                    if keycode == 36 || keycode == 76 {
+                        let formatOverride: TextFormatMode?
+                        if flags.contains(.shift) {
+                            formatOverride = .plainText
+                        } else if flags.contains(.option) {
+                            formatOverride = .preserveFormatting
+                        } else {
+                            formatOverride = nil
+                        }
+                        self.onEnter?(formatOverride)
+                        return nil
+                    }
                 }
                 if self.isFirstResponderTextInput() { return ev }
                 if self.isAnyTextInputActive() { return ev }

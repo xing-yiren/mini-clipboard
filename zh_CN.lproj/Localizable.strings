@@ -8,6 +8,9 @@
 "settings.defaultAction" = "默认动作";
 "defaultAction.copy" = "复制到剪贴板";
 "defaultAction.paste" = "直接粘贴";
+"settings.defaultTextFormat" = "默认格式";
+"textFormat.plain" = "纯文本";
+"textFormat.formatted" = "保留格式";
 "settings.retentionDays" = "保留天数";
 "settings.maxItems" = "保留条数";
 "settings.appLanguage" = "应用语言";
@@ -25,6 +28,7 @@
 "settings.panel.cornerRadius" = "面板圆角";
 "shortcuts.title" = "快捷键";
 "shortcuts.panel" = "面板";
+"shortcuts.recording" = "请按新快捷键…";
 "about.title" = "声明";
 "about.text" = "本软件开源，致力于提供简约、好看、丝滑的使用体验。";
 "language.zh" = "中文";
@@ -41,6 +45,7 @@
 
 "toast.copiedPlain" = "已复制为纯文本";
 "toast.copied" = "已复制到剪贴板";
+"toast.copiedFormatted" = "已复制并保留格式";
 "toast.addedToBoard" = "已添加到分组";
 "toast.deleted" = "已删除";
 "permission.inputMonitoring" = "需要输入监控权限";
@@ -50,6 +55,8 @@
 "timeline.rename.cancel" = "取消";
 "timeline.count.chars" = "字符";
 "timeline.help.copy" = "复制到剪贴板";
+"timeline.help.copyPlain" = "复制为纯文本";
+"timeline.help.copyFormatted" = "复制并保留格式";
 "timeline.help.directPaste" = "直接粘贴";
 "timeline.help.pastePlain" = "以纯文本复制";
 "timeline.help.delete" = "删除";
@@ -77,6 +84,11 @@
 "panel.selection.deleteSelected" = "删除所选";
 "panel.selection.addToBoard" = "加入分组";
 "panel.selection.clearSelection" = "清空选择";
+"panel.enterAction.copy" = "复制";
+"panel.enterAction.paste" = "直接粘贴";
+"panel.enterFormat.plain" = "纯文本";
+"panel.enterFormat.formatted" = "保留格式";
+"panel.enterAction.help" = "Enter 使用默认设置；Shift+Enter 强制纯文本；Option+Enter 强制保留格式";
 
 "boards.default.displayName" = "剪贴板";
 "preview.json.format" = "格式化 JSON";

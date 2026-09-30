@@ -26,6 +26,12 @@ public enum DefaultAction: String, Codable, CaseIterable {
     case paste
 }
 
+/// Controls how text-like clipboard items are written back to NSPasteboard.
+public enum TextFormatMode: String, Codable, CaseIterable {
+    case plainText
+    case preserveFormatting
+}
+
 // 搜索过滤条件：按类型与来源应用过滤
 public struct SearchFilters: Codable, Equatable {
     public var types: [ClipType]

@@ -1,5 +1,34 @@
 import SwiftUI
 import AppKit
+import Combine
+
+/// Back-deployable value-change observer for the project's macOS 12 target.
+/// SwiftUI's newer two-parameter `onChange` overload requires macOS 14.
+struct ValueChangeModifier<Value: Equatable>: ViewModifier {
+    let value: Value
+    let action: (Value) -> Void
+    @State private var previousValue: Value
+
+    init(value: Value, action: @escaping (Value) -> Void) {
+        self.value = value
+        self.action = action
+        _previousValue = State(initialValue: value)
+    }
+
+    func body(content: Content) -> some View {
+        content.onReceive(Just(value)) { newValue in
+            guard newValue != previousValue else { return }
+            previousValue = newValue
+            action(newValue)
+        }
+    }
+}
+
+extension View {
+    func onValueChange<Value: Equatable>(of value: Value, perform action: @escaping (Value) -> Void) -> some View {
+        modifier(ValueChangeModifier(value: value, action: action))
+    }
+}
 
 struct PanelRootView: View {
     @ObservedObject var controller: AppController
@@ -46,12 +75,12 @@ struct PanelRootView: View {
             UserDefaults.standard.set(Double(sidebarWidth), forKey: "sidebarWidth")
             UserDefaults.standard.set(Double(lastExpandedSidebarWidth), forKey: "lastExpandedSidebarWidth")
         }
-        .onChange(of: sidebarWidth) { w in
+        .onValueChange(of: sidebarWidth) { w in
             controller.sidebarWidth = w
             UserDefaults.standard.set(Double(w), forKey: "sidebarWidth")
             controller.panel.updateLayoutHeight(animated: !isDragging)
         }
-        .onChange(of: sidebarCollapsed) { c in
+        .onValueChange(of: sidebarCollapsed) { c in
             if c {
                 lastExpandedSidebarWidth = max(lastExpandedSidebarWidth, sidebarWidth)
                 sidebarWidth = collapsedSidebarWidth
@@ -64,14 +93,14 @@ struct PanelRootView: View {
                 UserDefaults.standard.set(Double(lastExpandedSidebarWidth), forKey: "lastExpandedSidebarWidth")
             }
         }
-        .onChange(of: layoutStyleRaw) { _ in controller.panel.updateLayoutHeight(animated: true) }
-        .onChange(of: panelPositionVertical) { _ in controller.panel.updateLayoutHeight(animated: true) }
-        .onChange(of: panelPositionHorizontal) { _ in controller.panel.updateLayoutHeight(animated: true) }
-        .onChange(of: panelHorizontalWidthPercent) { _ in controller.panel.updateLayoutHeight(animated: true) }
-        .onChange(of: panelVerticalHeightPercent) { _ in controller.panel.updateLayoutHeight(animated: true) }
-        .onChange(of: panelGridWidthPercent) { _ in controller.panel.updateLayoutHeight(animated: true) }
-        .onChange(of: panelGridHeightPercent) { _ in controller.panel.updateLayoutHeight(animated: true) }
-        .onChange(of: panelCornerRadius) { _ in controller.panel.updateCornerRadius() }
+        .onValueChange(of: layoutStyleRaw) { _ in controller.panel.updateLayoutHeight(animated: true) }
+        .onValueChange(of: panelPositionVertical) { _ in controller.panel.updateLayoutHeight(animated: true) }
+        .onValueChange(of: panelPositionHorizontal) { _ in controller.panel.updateLayoutHeight(animated: true) }
+        .onValueChange(of: panelHorizontalWidthPercent) { _ in controller.panel.updateLayoutHeight(animated: true) }
+        .onValueChange(of: panelVerticalHeightPercent) { _ in controller.panel.updateLayoutHeight(animated: true) }
+        .onValueChange(of: panelGridWidthPercent) { _ in controller.panel.updateLayoutHeight(animated: true) }
+        .onValueChange(of: panelGridHeightPercent) { _ in controller.panel.updateLayoutHeight(animated: true) }
+        .onValueChange(of: panelCornerRadius) { _ in controller.panel.updateCornerRadius() }
         .frame(minWidth: minWidthForLayout, minHeight: 260)
     }
     private var toolbar: some View {
@@ -135,6 +164,12 @@ struct PanelRootView: View {
             }
             .buttonStyle(.borderless)
             Spacer(minLength: 6)
+            Button(action: { controller.openSettings() }) {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            .buttonStyle(.borderless)
+            .help(L("panel.menu.settings"))
             Button(action: { controller.searchPopoverVisible = true }) {
                 Image(systemName: "magnifyingglass")
             }
@@ -166,7 +201,7 @@ struct PanelRootView: View {
                         controller.searchBarWidth = geo.size.width
                         reportSearchFrame(geo)
                     }
-                    .onChange(of: geo.size.width) { w in
+                    .onValueChange(of: geo.size.width) { w in
                         controller.searchBarWidth = w
                         reportSearchFrame(geo)
                     }
@@ -503,7 +538,7 @@ struct PanelRootView: View {
     private var mainArea: some View {
         ZStack(alignment: .topLeading) {
             VStack(spacing: 0) {
-                HistoryTimelineView(items: controller.items, boards: controller.boards, defaultBoardID: controller.store.defaultBoardID, currentBoardID: controller.selectedBoardID, onPaste: { item, plain in controller.pasteItem(item, plain: plain) }, onAddToBoard: { item, bid in controller.addToBoard(item, bid) }, onDelete: { item in controller.deleteItem(item) }, selectedItemID: controller.selectedItemID, onSelect: { item in controller.onItemTapped(item) }, onRename: { item, name in controller.renameItem(item, name: name) }, scrollOnSelection: controller.selectionByKeyboard, selectedIDs: controller.selectedIDs, selectedOrder: controller.selectedOrder, selectionMode: controller.selectionMode, onDefaultAction: { item in controller.onDefaultAction(item) }, onDirectPaste: { item in controller.directPasteItem(item) }, onSelectedItemFrame: { rect in
+                HistoryTimelineView(items: controller.items, boards: controller.boards, defaultBoardID: controller.store.defaultBoardID, currentBoardID: controller.selectedBoardID, onPaste: { item, format in controller.pasteItem(item, format: format) }, onAddToBoard: { item, bid in controller.addToBoard(item, bid) }, onDelete: { item in controller.deleteItem(item) }, selectedItemID: controller.selectedItemID, onSelect: { item in controller.onItemTapped(item) }, onRename: { item, name in controller.renameItem(item, name: name) }, scrollOnSelection: controller.selectionByKeyboard, selectedIDs: controller.selectedIDs, selectedOrder: controller.selectedOrder, selectionMode: controller.selectionMode, onDefaultAction: { item in controller.onDefaultAction(item) }, onDirectPaste: { item in controller.directPasteItem(item) }, onSelectedItemFrame: { rect in
                     if let rect, let win = NSApp.keyWindow ?? NSApp.windows.first {
                         let windowHeight = win.contentView?.bounds.height ?? win.frame.size.height
                         let cocoaY = windowHeight - (rect.origin.y + rect.size.height)
@@ -520,6 +555,16 @@ struct PanelRootView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(AppTheme.panelBackground)
+        .overlay(alignment: .bottomTrailing) {
+            Text(controller.enterActionHint)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 5)
+                .background(.ultraThinMaterial, in: Capsule())
+                .padding(8)
+                .help(L("panel.enterAction.help"))
+        }
         
     }
     private var isPanelInLowerHalfOfScreen: Bool {

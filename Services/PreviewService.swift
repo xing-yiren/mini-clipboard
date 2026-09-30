@@ -232,7 +232,7 @@ private struct PreviewContentView: View {
         .background(AppTheme.panelBackground)
         .id(item.id)
         .onAppear { usePrettyJSON = false; useTimeConversion = false }
-        .onChange(of: item.id) { _ in usePrettyJSON = false; useTimeConversion = false }
+        .onValueChange(of: item.id) { _ in usePrettyJSON = false; useTimeConversion = false }
     }
     @ViewBuilder private var content: some View {
         switch item.type {

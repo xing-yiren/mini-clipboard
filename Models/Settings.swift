@@ -30,7 +30,8 @@ public struct AppSettings: Codable, Equatable {
     public var shortcuts: Shortcuts
     public var appearance: AppearanceMode
     public var defaultAction: DefaultAction
-    public init(historyRetentionDays: Int = 30, historyMaxItems: Int = 100, ignoredApps: [String] = [], syncEnabled: Bool = false, privacy: PrivacySettings = PrivacySettings(), shortcuts: Shortcuts = Shortcuts(), appearance: AppearanceMode = .system, defaultAction: DefaultAction = .copy) {
+    public var defaultTextFormat: TextFormatMode
+    public init(historyRetentionDays: Int = 1, historyMaxItems: Int = 100, ignoredApps: [String] = [], syncEnabled: Bool = false, privacy: PrivacySettings = PrivacySettings(), shortcuts: Shortcuts = Shortcuts(), appearance: AppearanceMode = .system, defaultAction: DefaultAction = .copy, defaultTextFormat: TextFormatMode = .plainText) {
         self.historyRetentionDays = historyRetentionDays
         self.historyMaxItems = historyMaxItems
         self.ignoredApps = ignoredApps
@@ -39,6 +40,7 @@ public struct AppSettings: Codable, Equatable {
         self.shortcuts = shortcuts
         self.appearance = appearance
         self.defaultAction = defaultAction
+        self.defaultTextFormat = defaultTextFormat
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -50,11 +52,12 @@ public struct AppSettings: Codable, Equatable {
         case shortcuts
         case appearance
         case defaultAction
+        case defaultTextFormat
     }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        historyRetentionDays = try c.decodeIfPresent(Int.self, forKey: .historyRetentionDays) ?? 30
+        historyRetentionDays = try c.decodeIfPresent(Int.self, forKey: .historyRetentionDays) ?? 1
         historyMaxItems = try c.decodeIfPresent(Int.self, forKey: .historyMaxItems) ?? 500
         ignoredApps = try c.decodeIfPresent([String].self, forKey: .ignoredApps) ?? []
         syncEnabled = try c.decodeIfPresent(Bool.self, forKey: .syncEnabled) ?? false
@@ -62,6 +65,7 @@ public struct AppSettings: Codable, Equatable {
         shortcuts = try c.decodeIfPresent(Shortcuts.self, forKey: .shortcuts) ?? Shortcuts()
         appearance = try c.decodeIfPresent(AppearanceMode.self, forKey: .appearance) ?? .system
         defaultAction = try c.decodeIfPresent(DefaultAction.self, forKey: .defaultAction) ?? .copy
+        defaultTextFormat = try c.decodeIfPresent(TextFormatMode.self, forKey: .defaultTextFormat) ?? .plainText
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -74,5 +78,6 @@ public struct AppSettings: Codable, Equatable {
         try c.encode(shortcuts, forKey: .shortcuts)
         try c.encode(appearance, forKey: .appearance)
         try c.encode(defaultAction, forKey: .defaultAction)
+        try c.encode(defaultTextFormat, forKey: .defaultTextFormat)
     }
 }

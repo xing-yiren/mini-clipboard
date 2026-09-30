@@ -28,7 +28,7 @@ import AppKit
                             .font(.system(size: 13))
                             .frame(width: 80, alignment: .leading)
                         Spacer()
-                        Stepper(value: $settings.historyRetentionDays, in: 7...365) {
+                        Stepper(value: $settings.historyRetentionDays, in: 1...365) {
                             Text("\(settings.historyRetentionDays)")
                                 .font(.system(size: 13))
                                 .foregroundStyle(.secondary)
@@ -88,6 +88,20 @@ import AppKit
                         Picker("", selection: $settings.defaultAction) {
                             Text(L("defaultAction.copy")).tag(DefaultAction.copy)
                             Text(L("defaultAction.paste")).tag(DefaultAction.paste)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 190)
+                    }
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 8)
+                    HStack {
+                        Text(L("settings.defaultTextFormat"))
+                            .font(.system(size: 13))
+                            .frame(width: 80, alignment: .leading)
+                        Spacer()
+                        Picker("", selection: $settings.defaultTextFormat) {
+                            Text(L("textFormat.plain")).tag(TextFormatMode.plainText)
+                            Text(L("textFormat.formatted")).tag(TextFormatMode.preserveFormatting)
                         }
                         .pickerStyle(.segmented)
                         .frame(width: 190)
@@ -238,8 +252,7 @@ import AppKit
         .frame(maxWidth: 400)
         .controlSize(.small)
         .onAppear { settings = settingsStore.load() }
-        .onChange(of: appLanguage) { _ in }
-        .onChange(of: settings) { s in
+        .onValueChange(of: settings) { s in
             try? settingsStore.save(s)
             HotkeyService.shared?.unregisterAll()
             HotkeyService.shared?.registerShowPanel()
@@ -247,8 +260,6 @@ import AppKit
             HotkeyService.shared?.registerStackToggle()
             AppTheme.applyAppearance(s.appearance)
         }
-        .onChange(of: panelPositionVertical) { _ in }
-        .onChange(of: panelPositionHorizontal) { _ in }
     }
     
 }

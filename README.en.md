@@ -8,13 +8,15 @@ Lightweight, elegant macOS clipboard manager. Capture history, browse by timelin
 - History capture: Automatically collects text, links, images, files, colors, and more
 - Timeline browsing: Horizontal list, vertical list, and grid layouts; quick preview and rename
 - Pinboards and groups: Create/rename/color pinboards; history and pins are separate
-- Direct paste: Double-click to quick copy/paste, writes into system clipboard, supports plain-text paste
+- Direct paste: Double-click to quick copy/paste, with plain-text or preserved HTML/RTF formatting
 - Search and filters: Keyword + type/source-app filters, instant-as-you-type search
 - Settings and shortcuts: History retention period, layout toggle, shortcut mapping, panel position adjustment
 
 ## Keys
 - Panel: `⇧+⌘+P` (Configurable)
 - Direct Paste: Double-click or Enter
+- Force Plain Text: `Shift+Enter`
+- Force Preserved Formatting: `Option+Enter`
 - Quick Preview: Space
 - Move: Arrow keys
 - Search: Any key
@@ -63,7 +65,7 @@ Watch the demo video: 👇
 
 ## Permissions & Privacy
 - Direct paste and sequential paste stack require enabling "Accessibility" permissions. The first run will guide you to open System Settings.
-- History retention defaults to 30 days and can be adjusted in settings; expired unpinned history is automatically cleaned.
+- History retention defaults to 1 day and can be adjusted in settings; expired unpinned history is automatically cleaned, while items added to a Pinboard are retained.
 
 ## Default Shortcuts (Configurable in Settings)
 - Panel: `⇧+⌘+P`

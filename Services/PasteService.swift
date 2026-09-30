@@ -8,13 +8,15 @@ public final class PasteService: PasteServiceProtocol {
     private var stackActive = false
     private var asc = true
     public init() {}
-    public func paste(_ item: ClipItem, plainText: Bool) {
-        // 单次粘贴（可选择纯文本）
-        writeToPasteboard(item, plainText: plainText)
+    @discardableResult
+    public func paste(_ item: ClipItem, format: TextFormatMode) -> TextFormatMode {
+        writeToPasteboard(item, format: format)
     }
-    public func directPaste(_ item: ClipItem) {
-        writeToPasteboard(item, plainText: false)
+    @discardableResult
+    public func directPaste(_ item: ClipItem, format: TextFormatMode) -> TextFormatMode {
+        let actualFormat = writeToPasteboard(item, format: format)
         triggerPasteCommand()
+        return actualFormat
     }
     
     public func triggerPasteCommand() {
@@ -47,78 +49,152 @@ public final class PasteService: PasteServiceProtocol {
     public func deliverStack() {
         // 依序将栈中的条目写入并模拟粘贴快捷键
         let seq = asc ? stack : stack.reversed()
+        let format = SettingsStore().load().defaultTextFormat
         for i in seq {
-            writeToPasteboard(i, plainText: false)
+            writeToPasteboard(i, format: format)
         }
         stack.removeAll()
     }
-    private func writeToPasteboard(_ item: ClipItem, plainText: Bool) {
+    @discardableResult
+    private func writeToPasteboard(_ item: ClipItem, format: TextFormatMode) -> TextFormatMode {
         let pb = NSPasteboard.general
         pb.clearContents()
-        if plainText {
-            if item.type == .text {
-                if item.metadata["rich"] == "rtf" {
-                    if item.metadata["plainSource"] == "pb" {
-                        pb.setString(item.text ?? "", forType: .string)
-                    } else if let u = item.contentRef, let s = try? NSAttributedString(url: u, options: [:], documentAttributes: nil) {
-                        pb.setString(s.string, forType: .string)
-                    } else {
-                        pb.setString(item.text ?? "", forType: .string)
-                    }
-                } else if item.metadata["rich"] == "html" {
-                    if let u = item.contentRef, let d = try? Data(contentsOf: u), let a = try? NSAttributedString(data: d, options: [.documentType: NSAttributedString.DocumentType.html], documentAttributes: nil) {
-                        pb.setString(a.string, forType: .string)
-                    } else {
-                        pb.setString(item.text ?? "", forType: .string)
-                    }
-                } else if let u = item.contentRef, let s = try? String(contentsOf: u) {
-                    pb.setString(s, forType: .string)
-                } else {
-                    pb.setString(item.text ?? "", forType: .string)
-                }
-            } else {
-                let t = item.metadata["colorHex"] ?? item.text ?? ""
-                pb.setString(t, forType: .string)
-            }
-            return
-        }
         switch item.type {
         case .text:
-            if let u = item.contentRef, item.metadata["rich"] == "rtf" {
-                if let d = try? Data(contentsOf: u) { 
-                    pb.setData(d, forType: .rtf)
-                    if let a = try? NSAttributedString(url: u, options: [:], documentAttributes: nil) { pb.setString(a.string, forType: .string) } else { pb.setString(item.text ?? "", forType: .string) }
-                } else if let a = try? NSAttributedString(url: u, options: [:], documentAttributes: nil) { pb.setString(a.string, forType: .string) }
-                else { pb.setString(item.text ?? "", forType: .string) }
-            } else if let u = item.contentRef, item.metadata["rich"] == "html" {
-                if let d = try? Data(contentsOf: u) {
-                    pb.setData(d, forType: .html)
-                    if item.metadata["plainSource"] == "pb", let t = item.text { 
-                        pb.setString(t, forType: .string)
-                    } else if let a = try? NSAttributedString(data: d, options: [.documentType: NSAttributedString.DocumentType.html], documentAttributes: nil) {
-                        pb.setString(a.string, forType: .string)
-                        let range = NSRange(location: 0, length: a.length)
-                        if let r = a.rtf(from: range, documentAttributes: [:]) { pb.setData(r, forType: .rtf) }
-                    } else { 
-                        pb.setString(item.text ?? "", forType: .string)
-                    }
-                } else {
-                    pb.setString(item.text ?? "", forType: .string)
-                }
-            } else if let u = item.contentRef, let s = try? String(contentsOf: u) {
-                pb.setString(s, forType: .string)
-            } else {
-                pb.setString(item.text ?? "", forType: .string)
+            if format == .preserveFormatting, writePreservedText(item, to: pb) {
+                return .preserveFormatting
             }
+            pb.setString(plainText(for: item), forType: .string)
+            return .plainText
         case .link:
-            if let u = item.contentRef { pb.setString(u.absoluteString, forType: .URL) }
+            // Standalone URLs always remain literal text. Rich URL flavors let
+            // some editors synthesize Markdown such as `[title](url)`.
+            pb.setString(plainText(for: item), forType: .string)
+            return .plainText
         case .image:
             if let u = item.contentRef, let d = try? Data(contentsOf: u) { pb.setData(d, forType: .png) }
+            return format
         case .file:
             if let u = item.contentRef { pb.setString(u.absoluteString, forType: .fileURL) }
+            return format
         case .color:
-            let t = item.metadata["colorHex"] ?? item.text ?? ""
-            pb.setString(t, forType: .string)
+            pb.setString(plainText(for: item), forType: .string)
+            return .plainText
+        }
+    }
+
+    private func writePreservedText(_ item: ClipItem, to pasteboard: NSPasteboard) -> Bool {
+        guard let url = item.contentRef else { return false }
+        let plain = plainText(for: item)
+        switch item.metadata["rich"] {
+        case "html":
+            guard let data = try? Data(contentsOf: url) else { return false }
+            pasteboard.setData(data, forType: .html)
+            pasteboard.setString(plain, forType: .string)
+            return true
+        case "rtf":
+            guard let data = try? Data(contentsOf: url) else { return false }
+            pasteboard.setData(data, forType: .rtf)
+            pasteboard.setString(plain, forType: .string)
+            return true
+        default:
+            return false
+        }
+    }
+
+    public func plainText(for item: ClipItem) -> String {
+        switch item.type {
+        case .text:
+            // Prefer the exact plain-text flavor supplied by the source app. If
+            // the source only supplied rich content, derive readable text from it.
+            if let url = item.contentRef {
+                if item.metadata["rich"] == "html",
+                   let data = try? Data(contentsOf: url) {
+                    // A rendered selection containing images must not leak image
+                    // sources into plain-text output. Markdown source copied as
+                    // text has no rendered <img>/<picture> node and stays intact.
+                    if htmlContainsRenderedImages(data) {
+                        if let text = textFromHTML(data, removingImages: true) {
+                            return text
+                        }
+                        return removingRenderedImageSources(from: item.text ?? "", htmlData: data)
+                    }
+                    if item.metadata["plainSource"] == "pb", let text = item.text {
+                        return text
+                    }
+                    if let text = textFromHTML(data, removingImages: false) {
+                        return text
+                    }
+                }
+                if item.metadata["rich"] == "rtf",
+                   let attributed = try? NSAttributedString(url: url, options: [:], documentAttributes: nil) {
+                    if item.metadata["plainSource"] == "pb", let text = item.text {
+                        return text
+                    }
+                    return attributed.string
+                }
+                if url.pathExtension.lowercased() == "txt",
+                   let text = try? String(contentsOf: url, encoding: .utf8) {
+                    return text
+                }
+            }
+            return item.text ?? ""
+        case .link:
+            // A literal Markdown string is captured as `.text`, so links here
+            // represent URL values and are written without a rich URL flavor.
+            return item.text ?? item.metadata["url"] ?? item.contentRef?.absoluteString ?? ""
+        case .image:
+            return item.text ?? ""
+        case .file:
+            return item.contentRef?.path ?? item.text ?? ""
+        case .color:
+            return item.metadata["colorHex"] ?? item.text ?? ""
+        }
+    }
+
+    private func htmlContainsRenderedImages(_ data: Data) -> Bool {
+        guard let html = String(data: data, encoding: .utf8) else { return false }
+        return html.range(of: "<img", options: .caseInsensitive) != nil
+            || html.range(of: "<picture", options: .caseInsensitive) != nil
+    }
+
+    private func textFromHTML(_ data: Data, removingImages: Bool) -> String? {
+        var sourceData = data
+        if removingImages, var html = String(data: data, encoding: .utf8) {
+            html = replacingHTMLPattern(#"<picture[^>]*>.*?</picture\s*>"#, in: html)
+            html = replacingHTMLPattern(#"<img[^>]*>"#, in: html)
+            sourceData = Data(html.utf8)
+        }
+        guard let attributed = try? NSAttributedString(
+            data: sourceData,
+            options: [.documentType: NSAttributedString.DocumentType.html],
+            documentAttributes: nil
+        ) else { return nil }
+        return attributed.string.replacingOccurrences(of: "\u{FFFC}", with: "")
+    }
+
+    private func replacingHTMLPattern(_ pattern: String, in html: String) -> String {
+        guard let expression = try? NSRegularExpression(
+            pattern: pattern,
+            options: [.caseInsensitive, .dotMatchesLineSeparators]
+        ) else { return html }
+        let range = NSRange(html.startIndex..<html.endIndex, in: html)
+        return expression.stringByReplacingMatches(in: html, range: range, withTemplate: "")
+    }
+
+    private func removingRenderedImageSources(from text: String, htmlData: Data) -> String {
+        guard let html = String(data: htmlData, encoding: .utf8),
+              let expression = try? NSRegularExpression(
+                  pattern: #"\bsrc\s*=\s*[\"']([^\"']+)[\"']"#,
+                  options: .caseInsensitive
+              ) else { return text }
+        let htmlRange = NSRange(html.startIndex..<html.endIndex, in: html)
+        let sources = expression.matches(in: html, range: htmlRange).compactMap { match -> String? in
+            guard match.numberOfRanges > 1, let range = Range(match.range(at: 1), in: html) else { return nil }
+            return String(html[range])
+        }
+        return sources.reduce(text) { partial, source in
+            partial.replacingOccurrences(of: source, with: "")
         }
     }
 }

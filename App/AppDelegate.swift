@@ -10,6 +10,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let settings = SettingsStore().load()
         AppTheme.applyAppearance(settings.appearance)
         controller = AppController()
+        controller?.onOpenSettings = { [weak self] in
+            self?.openSettings()
+        }
         NSApp.setActivationPolicy(.accessory)
         setApplicationIconFromPublic()
         controller?.start()

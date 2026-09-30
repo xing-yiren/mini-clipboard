@@ -36,9 +36,29 @@ public final class IndexStore: IndexStoreProtocol {
     public func save(_ item: ClipItem) throws {
         queue.sync {
             let persisted = ensurePermanentContent(item)
-            items.removeAll { isDuplicate($0, persisted) }
-            if let i = items.firstIndex(where: { $0.id == persisted.id }) { items[i] = persisted } else { items.insert(persisted, at: 0) }
-            contentCache[persisted.id] = nil
+            if let index = items.firstIndex(where: { $0.id == persisted.id || isDuplicate($0, persisted) }) {
+                let existing = items.remove(at: index)
+                // Keep the stable ID so Pinboard membership survives when the same
+                // content is copied again. Refresh the capture details and timestamp,
+                // while preserving the user's name, tags and pinned state.
+                let refreshed = ClipItem(
+                    id: existing.id,
+                    type: persisted.type,
+                    contentRef: persisted.contentRef,
+                    text: persisted.text,
+                    sourceApp: persisted.sourceApp,
+                    copiedAt: persisted.copiedAt,
+                    metadata: persisted.metadata,
+                    tags: existing.tags,
+                    isPinned: existing.isPinned,
+                    name: existing.name
+                )
+                items.insert(refreshed, at: 0)
+                contentCache[existing.id] = nil
+            } else {
+                items.insert(persisted, at: 0)
+                contentCache[persisted.id] = nil
+            }
             persist()
             let s = settingsStore.load()
             cleanupExpiredItems(days: s.historyRetentionDays)
@@ -94,7 +114,7 @@ public final class IndexStore: IndexStoreProtocol {
         if item.type == .text, let u = item.contentRef {
             let ext = u.pathExtension.lowercased()
             if ext == "txt" {
-                if let s = try? String(contentsOf: u) { parts.append(s) }
+                if let s = try? String(contentsOf: u, encoding: .utf8) { parts.append(s) }
             } else if let a = try? NSAttributedString(url: u, options: [:], documentAttributes: nil) {
                 parts.append(a.string)
             }

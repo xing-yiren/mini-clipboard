@@ -1,5 +1,9 @@
 import Foundation
 
+extension Notification.Name {
+    static let miniClipboardSettingsDidChange = Notification.Name("MiniClipboardSettingsDidChange")
+}
+
 // 设置存储：使用 Application Support 目录保存/加载应用设置
 public final class SettingsStore: SettingsStoreProtocol {
     private let url: URL
@@ -19,5 +23,6 @@ public final class SettingsStore: SettingsStoreProtocol {
     public func save(_ settings: AppSettings) throws {
         let d = try encoder.encode(settings)
         try d.write(to: url)
+        NotificationCenter.default.post(name: .miniClipboardSettingsDidChange, object: settings)
     }
 }

@@ -23,4 +23,9 @@ public struct ClipItem: Identifiable, Codable, Equatable {
         self.tags = tags
         self.isPinned = isPinned
     }
+
+    public var canPreserveFormatting: Bool {
+        guard type == .text, contentRef != nil else { return false }
+        return metadata["rich"] == "html" || metadata["rich"] == "rtf"
+    }
 }

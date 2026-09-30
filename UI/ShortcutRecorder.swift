@@ -8,25 +8,72 @@ struct ShortcutRecorder: NSViewRepresentable {
     func makeNSView(context: Context) -> ShortcutCaptureView {
         let v = ShortcutCaptureView()
         v.onShortcut = { s in shortcut = s }
+        v.shortcutValue = shortcut
         v.stringValue = shortcut
         v.isEditable = false
+        v.isSelectable = false
         v.isBordered = true
+        v.focusRingType = .default
         v.alignment = .center
         v.font = .systemFont(ofSize: 13)
         return v
     }
-    func updateNSView(_ nsView: ShortcutCaptureView, context: Context) { nsView.stringValue = shortcut }
+    func updateNSView(_ nsView: ShortcutCaptureView, context: Context) {
+        nsView.shortcutValue = shortcut
+        if nsView.window?.firstResponder !== nsView {
+            nsView.stringValue = shortcut
+        }
+    }
 }
 
 final class ShortcutCaptureView: NSTextField {
     var onShortcut: ((String) -> Void)?
+    var shortcutValue: String = ""
     private var tracking: NSTrackingArea?
     override var acceptsFirstResponder: Bool { true }
-    override func mouseDown(with event: NSEvent) { window?.makeFirstResponder(self) }
+    override func mouseDown(with event: NSEvent) {
+        window?.makeFirstResponder(self)
+    }
+    override func becomeFirstResponder() -> Bool {
+        let accepted = super.becomeFirstResponder()
+        if accepted {
+            stringValue = L("shortcuts.recording")
+            needsDisplay = true
+        }
+        return accepted
+    }
+    override func resignFirstResponder() -> Bool {
+        let resigned = super.resignFirstResponder()
+        if resigned {
+            stringValue = shortcutValue
+            needsDisplay = true
+        }
+        return resigned
+    }
     override func keyDown(with event: NSEvent) {
+        capture(event)
+    }
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        guard window?.firstResponder === self else {
+            return super.performKeyEquivalent(with: event)
+        }
+        capture(event)
+        return true
+    }
+    private func capture(_ event: NSEvent) {
+        if event.keyCode == 53 {
+            window?.makeFirstResponder(nil)
+            return
+        }
         let s = ShortcutCaptureView.stringify(event)
+        guard s.contains("+"), !ShortcutCaptureView.keyName(for: event.keyCode).isEmpty else {
+            NSSound.beep()
+            return
+        }
+        shortcutValue = s
         onShortcut?(s)
         stringValue = s
+        window?.makeFirstResponder(nil)
     }
     override func updateTrackingAreas() {
         super.updateTrackingAreas()

@@ -4,6 +4,7 @@ import Combine
 import UniformTypeIdentifiers
 
 final class AppController: ObservableObject {
+    var onOpenSettings: (() -> Void)?
     let store: IndexStore
     let settingsStore: SettingsStore
     let monitor: ClipboardMonitor
@@ -25,6 +26,7 @@ final class AppController: ObservableObject {
     @Published var searchPopoverVisible: Bool = false
     @Published var searchBarWidth: CGFloat = 0
     @Published var sidebarWidth: CGFloat = 180
+    @Published var appSettings: AppSettings = AppSettings()
     private let search: SearchService
     private var cancellables: Set<AnyCancellable> = []
     init() {
@@ -36,6 +38,7 @@ final class AppController: ObservableObject {
         preview = PreviewService()
         panel = PanelWindowController()
         search = SearchService(store: store)
+        appSettings = settingsStore.load()
         if let bid = Bundle.main.bundleIdentifier { monitor.setIgnoredApps([bid]) }
         monitor.onItemCaptured = { [weak self] item in
             try? self?.store.save(item)
@@ -48,7 +51,8 @@ final class AppController: ObservableObject {
             let list = self.search.search(self.query, filters: self.filters, limit: 100)
             if idx-1 < list.count {
                 self.monitor.suppressCaptures(for: 1.0)
-                self.paste.paste(list[idx-1], plainText: plain)
+                let format: TextFormatMode = plain ? .plainText : self.appSettings.defaultTextFormat
+                self.paste.paste(list[idx-1], format: format)
                 self.store.moveToFront(list[idx-1].id)
                 self.refresh()
             }
@@ -63,7 +67,8 @@ final class AppController: ObservableObject {
             let list = self.search.search(self.query, filters: self.filters, limit: 100)
             if idx-1 < list.count {
                 self.monitor.suppressCaptures(for: 1.0)
-                self.paste.paste(list[idx-1], plainText: plain)
+                let format: TextFormatMode = plain ? .plainText : self.appSettings.defaultTextFormat
+                self.paste.paste(list[idx-1], format: format)
                 self.store.moveToFront(list[idx-1].id)
                 self.refresh()
             }
@@ -81,7 +86,7 @@ final class AppController: ObservableObject {
         panel.onArrowRight = { [weak self] in self?.moveSelectionRight() }
         panel.onArrowUp = { [weak self] in self?.moveSelectionUp() }
         panel.onArrowDown = { [weak self] in self?.moveSelectionDown() }
-        panel.onEnter = { [weak self] in self?.confirmSelectionAndPaste() }
+        panel.onEnter = { [weak self] formatOverride in self?.confirmSelectionAndPaste(formatOverride: formatOverride) }
         panel.previewService = preview
         panel.onSpace = { [weak self] in
             guard let self = self else { return }
@@ -110,6 +115,16 @@ final class AppController: ObservableObject {
                 guard self.panel.previewService?.isVisible() == true else { return }
                 guard let id = id, let item = self.items.first(where: { $0.id == id }) else { return }
                 self.panel.showPreview(item)
+            }
+            .store(in: &cancellables)
+        NotificationCenter.default.publisher(for: .miniClipboardSettingsDidChange)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] notification in
+                if let settings = notification.object as? AppSettings {
+                    self?.appSettings = settings
+                } else {
+                    self?.appSettings = self?.settingsStore.load() ?? AppSettings()
+                }
             }
             .store(in: &cancellables)
     }
@@ -147,13 +162,18 @@ final class AppController: ObservableObject {
             }
         }
     }
-    func pasteItem(_ item: ClipItem, plain: Bool) {
+    func pasteItem(_ item: ClipItem, format: TextFormatMode? = nil) {
         monitor.suppressCaptures(for: 1.0)
-        paste.paste(item, plainText: plain)
+        let actualFormat = paste.paste(item, format: format ?? appSettings.defaultTextFormat)
         store.moveToFront(item.id)
         refresh()
         panel.hide()
-        let msg = plain ? L("toast.copiedPlain") : L("toast.copied")
+        let msg: String
+        if item.type == .image || item.type == .file {
+            msg = L("toast.copied")
+        } else {
+            msg = actualFormat == .preserveFormatting ? L("toast.copiedFormatted") : L("toast.copiedPlain")
+        }
         panel.showToast(msg)
     }
     func copySelectedPlainText() {
@@ -167,7 +187,7 @@ final class AppController: ObservableObject {
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(joined, forType: .string)
-        panel.showToast(L("toast.copied"))
+        panel.showToast(L("toast.copiedPlain"))
         clearSelection()
     }
     func copySelectedRichText() {
@@ -176,23 +196,52 @@ final class AppController: ObservableObject {
         let orderedIDs = selectedOrder.filter { selectedIDs.contains($0) }
         let finalIDs = orderedIDs.isEmpty ? ids : orderedIDs
         let itemsToCopy = finalIDs.compactMap { id in items.first(where: { $0.id == id }) }
+        if let item = itemsToCopy.first, itemsToCopy.count == 1 {
+            let actualFormat = paste.paste(item, format: .preserveFormatting)
+            let message: String
+            if item.type == .image || item.type == .file {
+                message = L("toast.copied")
+            } else {
+                message = actualFormat == .preserveFormatting ? L("toast.copiedFormatted") : L("toast.copiedPlain")
+            }
+            panel.showToast(message)
+            clearSelection()
+            return
+        }
         let agg = NSMutableAttributedString()
         for (idx, it) in itemsToCopy.enumerated() {
-            agg.append(NSAttributedString(string: plainText(of: it)))
+            agg.append(richSegment(of: it))
             if idx < itemsToCopy.count - 1 { agg.append(NSAttributedString(string: "\n\n")) }
         }
         let pb = NSPasteboard.general
         pb.clearContents()
-        pb.declareTypes([.html, .string], owner: nil)
-        let html = htmlAggregate(for: itemsToCopy)
-        if let d = html.data(using: .utf8) { pb.setData(d, forType: .html) }
+        let range = NSRange(location: 0, length: agg.length)
+        if let html = try? agg.data(from: range, documentAttributes: [.documentType: NSAttributedString.DocumentType.html]) {
+            pb.setData(html, forType: .html)
+        }
+        if let rtf = agg.rtf(from: range, documentAttributes: [:]) {
+            pb.setData(rtf, forType: .rtf)
+        }
         pb.setString(agg.string, forType: .string)
-        panel.showToast(L("toast.copied"))
+        panel.showToast(L("toast.copiedFormatted"))
         clearSelection()
     }
     private func richSegment(of item: ClipItem) -> NSAttributedString {
         switch item.type {
         case .text:
+            if let url = item.contentRef, item.metadata["rich"] == "html",
+               let data = try? Data(contentsOf: url),
+               let attributed = try? NSAttributedString(
+                   data: data,
+                   options: [.documentType: NSAttributedString.DocumentType.html],
+                   documentAttributes: nil
+               ) {
+                return attributed
+            }
+            if let url = item.contentRef, item.metadata["rich"] == "rtf",
+               let attributed = try? NSAttributedString(url: url, options: [:], documentAttributes: nil) {
+                return attributed
+            }
             return NSAttributedString(string: plainText(of: item))
         case .link:
             let urlString = item.contentRef?.absoluteString ?? (item.metadata["url"] ?? (item.text ?? ""))
@@ -239,107 +288,8 @@ final class AppController: ObservableObject {
             return NSAttributedString(string: item.metadata["colorHex"] ?? (item.text ?? ""))
         }
     }
-    private func htmlAggregate(for items: [ClipItem]) -> String {
-        var parts: [String] = []
-        for it in items { parts.append(htmlSegment(of: it)) }
-        let body = parts.joined(separator: "<br><br>")
-        return "<html><body>\(body)</body></html>"
-    }
-    private func htmlSegment(of item: ClipItem) -> String {
-        switch item.type {
-        case .text:
-            let s = plainText(of: item)
-            return escapeHTML(s).replacingOccurrences(of: "\n", with: "<br>")
-        case .link:
-            let urlString = item.contentRef?.absoluteString ?? (item.metadata["url"] ?? (item.text ?? ""))
-            let e = escapeHTML(urlString)
-            return "<a href=\"\(e)\">\(e)</a>"
-        case .image:
-            if let u = item.contentRef, let d = try? Data(contentsOf: u) {
-                let mime = mimeType(for: u) ?? "image/png"
-                let b64 = d.base64EncodedString()
-                let size = imagePixelSize(from: d)
-                var dim = ""
-                if let s = size { dim = " width=\"\(s.0)\" height=\"\(s.1)\" style=\"width: \(s.0)px; height: \(s.1)px; max-width: none;\"" }
-                var html = "<img src=\"data:\(mime);base64,\(b64)\"\(dim)/>"
-                if let t = item.text, !t.isEmpty { html += "<br>\(escapeHTML(t))" }
-                return html
-            }
-            return escapeHTML(item.text ?? "")
-        case .file:
-            if let u = item.contentRef {
-                if let t = UTType(filenameExtension: u.pathExtension.lowercased()), t.conforms(to: .image), let d = try? Data(contentsOf: u) {
-                    let mime = mimeType(for: u) ?? "image/png"
-                    let b64 = d.base64EncodedString()
-                    let size = imagePixelSize(from: d)
-                    var dim = ""
-                    if let s = size { dim = " width=\"\(s.0)\" height=\"\(s.1)\" style=\"width: \(s.0)px; height: \(s.1)px; max-width: none;\"" }
-                    var html = "<img src=\"data:\(mime);base64,\(b64)\"\(dim)/>"
-                    let caption = item.text ?? u.lastPathComponent
-                    if !caption.isEmpty { html += "<br>\(escapeHTML(caption))" }
-                    return html
-                }
-                let name = escapeHTML(u.lastPathComponent)
-                let href = escapeHTML(u.absoluteString)
-                return "<div>\(name)</div><a href=\"\(href)\">\(href)</a>"
-            }
-            return escapeHTML(item.text ?? "")
-        case .color:
-            let s = item.metadata["colorHex"] ?? (item.text ?? "")
-            return escapeHTML(s)
-        }
-    }
-    private func escapeHTML(_ s: String) -> String {
-        var r = s
-        r = r.replacingOccurrences(of: "&", with: "&amp;")
-        r = r.replacingOccurrences(of: "<", with: "&lt;")
-        r = r.replacingOccurrences(of: ">", with: "&gt;")
-        r = r.replacingOccurrences(of: "\"", with: "&quot;")
-        r = r.replacingOccurrences(of: "'", with: "&#39;")
-        return r
-    }
-    private func mimeType(for url: URL) -> String? {
-        let ext = url.pathExtension.lowercased()
-        guard !ext.isEmpty, let t = UTType(filenameExtension: ext) else { return nil }
-        if t.conforms(to: .png) { return "image/png" }
-        if t.conforms(to: .jpeg) { return "image/jpeg" }
-        if t.conforms(to: .gif) { return "image/gif" }
-        if t.conforms(to: .tiff) { return "image/tiff" }
-        return nil
-    }
-    private func imagePixelSize(from data: Data) -> (Int, Int)? {
-        if let rep = NSBitmapImageRep(data: data) { return (rep.pixelsWide, rep.pixelsHigh) }
-        if let img = NSImage(data: data), let tiff = img.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff) { return (rep.pixelsWide, rep.pixelsHigh) }
-        return nil
-    }
     private func plainText(of item: ClipItem) -> String {
-        switch item.type {
-        case .text:
-            if let rich = item.metadata["rich"] {
-                if rich == "rtf" {
-                    if item.metadata["plainSource"] == "pb" { return item.text ?? "" }
-                    if let u = item.contentRef, let a = try? NSAttributedString(url: u, options: [:], documentAttributes: nil) { return a.string }
-                    return item.text ?? ""
-                } else if rich == "html" {
-                    if let u = item.contentRef, let d = try? Data(contentsOf: u), let a = try? NSAttributedString(data: d, options: [.documentType: NSAttributedString.DocumentType.html], documentAttributes: nil) { return a.string }
-                    return item.text ?? ""
-                }
-            }
-            if let u = item.contentRef {
-                if let a = try? NSAttributedString(url: u, options: [:], documentAttributes: nil) { return a.string }
-                if let s = try? String(contentsOf: u) { return s }
-            }
-            return item.text ?? ""
-        case .link:
-            if let u = item.contentRef { return u.absoluteString }
-            return item.metadata["url"] ?? (item.text ?? "")
-        case .image:
-            return item.text ?? ""
-        case .file:
-            return item.text ?? (item.contentRef?.lastPathComponent ?? "")
-        case .color:
-            return item.metadata["colorHex"] ?? (item.text ?? "")
-        }
+        paste.plainText(for: item)
     }
     func deleteSelected() {
         let ids = Array(selectedIDs)
@@ -514,20 +464,20 @@ final class AppController: ObservableObject {
             setIndex(idx + 1)
         }
     }
-    private func confirmSelectionAndPaste() {
+    private func confirmSelectionAndPaste(formatOverride: TextFormatMode?) {
         if let id = selectedItemID, let item = items.first(where: { $0.id == id }) {
-            onDefaultAction(item)
+            onDefaultAction(item, formatOverride: formatOverride)
         } else if let first = items.first {
-            onDefaultAction(first)
+            onDefaultAction(first, formatOverride: formatOverride)
         }
     }
     
-    func directPasteItem(_ item: ClipItem) {
+    func directPasteItem(_ item: ClipItem, format: TextFormatMode? = nil) {
         if paste.checkAccessibilityPermission() {
             // Direct paste
             panel.hide()
             monitor.suppressCaptures(for: 1.0)
-            paste.directPaste(item)
+            paste.directPaste(item, format: format ?? appSettings.defaultTextFormat)
             store.moveToFront(item.id)
             refresh()
         } else {
@@ -572,13 +522,25 @@ final class AppController: ObservableObject {
         }
     }
 
-    func onDefaultAction(_ item: ClipItem) {
-        let settings = settingsStore.load()
-        if settings.defaultAction == .paste {
-            directPasteItem(item)
-        } else {
-            // Default copy behavior
-            pasteItem(item, plain: false)
+    func openSettings() {
+        panel.hide()
+        DispatchQueue.main.async { [weak self] in
+            self?.onOpenSettings?()
         }
+    }
+
+    func onDefaultAction(_ item: ClipItem, formatOverride: TextFormatMode? = nil) {
+        let format = formatOverride ?? appSettings.defaultTextFormat
+        if appSettings.defaultAction == .paste {
+            directPasteItem(item, format: format)
+        } else {
+            pasteItem(item, format: format)
+        }
+    }
+
+    var enterActionHint: String {
+        let action = appSettings.defaultAction == .paste ? L("panel.enterAction.paste") : L("panel.enterAction.copy")
+        let format = appSettings.defaultTextFormat == .plainText ? L("panel.enterFormat.plain") : L("panel.enterFormat.formatted")
+        return "↩ \(action) · \(format)"
     }
 }

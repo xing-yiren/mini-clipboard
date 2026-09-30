@@ -18,7 +18,7 @@ public struct HistoryTimelineView: View {
     public let boards: [Pinboard]
     public let defaultBoardID: UUID
     public let currentBoardID: UUID?
-    public let onPaste: (ClipItem, Bool) -> Void
+    public let onPaste: (ClipItem, TextFormatMode) -> Void
     public let onAddToBoard: (ClipItem, UUID) -> Void
     public let onDelete: (ClipItem) -> Void
     public let selectedItemID: UUID?
@@ -31,7 +31,7 @@ public struct HistoryTimelineView: View {
     public let onDefaultAction: (ClipItem) -> Void
     public let onDirectPaste: (ClipItem) -> Void
     @AppStorage("historyLayoutStyle") private var layoutStyleRaw: String = "horizontal"
-    public init(items: [ClipItem], boards: [Pinboard], defaultBoardID: UUID, currentBoardID: UUID?, onPaste: @escaping (ClipItem, Bool) -> Void, onAddToBoard: @escaping (ClipItem, UUID) -> Void, onDelete: @escaping (ClipItem) -> Void, selectedItemID: UUID?, onSelect: @escaping (ClipItem) -> Void, onRename: @escaping (ClipItem, String) -> Void, scrollOnSelection: Bool, selectedIDs: Set<UUID>, selectedOrder: [UUID], selectionMode: Bool, onDefaultAction: @escaping (ClipItem) -> Void, onDirectPaste: @escaping (ClipItem) -> Void, onSelectedItemFrame: ((CGRect?) -> Void)? = nil) {
+    public init(items: [ClipItem], boards: [Pinboard], defaultBoardID: UUID, currentBoardID: UUID?, onPaste: @escaping (ClipItem, TextFormatMode) -> Void, onAddToBoard: @escaping (ClipItem, UUID) -> Void, onDelete: @escaping (ClipItem) -> Void, selectedItemID: UUID?, onSelect: @escaping (ClipItem) -> Void, onRename: @escaping (ClipItem, String) -> Void, scrollOnSelection: Bool, selectedIDs: Set<UUID>, selectedOrder: [UUID], selectionMode: Bool, onDefaultAction: @escaping (ClipItem) -> Void, onDirectPaste: @escaping (ClipItem) -> Void, onSelectedItemFrame: ((CGRect?) -> Void)? = nil) {
         self.items = items
         self.boards = boards
         self.defaultBoardID = defaultBoardID
@@ -85,7 +85,7 @@ public struct HistoryTimelineView: View {
                         }
                     )
                     .frame(maxWidth: .infinity)
-                    .onChange(of: items.count) { c in displayedCount = min(c, 60) }
+                    .onValueChange(of: items.count) { c in displayedCount = min(c, 60) }
                 } else if layoutStyle == .grid {
                     ScrollView {
                         LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 12) {
@@ -113,7 +113,7 @@ public struct HistoryTimelineView: View {
                         }
                     )
                     .frame(maxWidth: .infinity)
-                    .onChange(of: items.count) { c in displayedCount = min(c, 60) }
+                    .onValueChange(of: items.count) { c in displayedCount = min(c, 60) }
                 } else {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 12) {
@@ -141,12 +141,12 @@ public struct HistoryTimelineView: View {
                         }
                     )
                     .frame(maxWidth: .infinity)
-                    .onChange(of: items.count) { c in displayedCount = min(c, 60) }
+                    .onValueChange(of: items.count) { c in displayedCount = min(c, 60) }
                 }
             }
             .onPreferenceChange(ItemFramePreferenceKey.self) { v in itemFrames = v }
             .onPreferenceChange(ContainerFramePreferenceKey.self) { v in containerFrame = v }
-            .onChange(of: selectedItemID) { id in
+            .onValueChange(of: selectedItemID) { id in
                 if let id, let idx = items.firstIndex(where: { $0.id == id }) {
                     displayedCount = min(items.count, max(displayedCount, idx + 1))
                     if scrollOnSelection && shouldScroll(to: id) {
@@ -155,7 +155,7 @@ public struct HistoryTimelineView: View {
                     updateAnchorRect()
                 }
             }
-            .onChange(of: itemFrames) { _ in updateAnchorRect() }
+            .onValueChange(of: itemFrames) { _ in updateAnchorRect() }
         }
     }
     private func shouldScroll(to id: UUID) -> Bool {
@@ -190,7 +190,7 @@ private struct ItemCardView: View, Equatable {
     let boards: [Pinboard]
     let defaultBoardID: UUID
     let currentBoardID: UUID?
-    let onPaste: (ClipItem, Bool) -> Void
+    let onPaste: (ClipItem, TextFormatMode) -> Void
     let onAddToBoard: (ClipItem, UUID) -> Void
     let onDelete: (ClipItem) -> Void
     let selected: Bool
@@ -275,7 +275,7 @@ private struct ItemCardView: View, Equatable {
                     VStack(spacing: 0) {
                         Divider()
                         HStack(spacing: 14) {
-                            Button { onPaste(item, false) } label: {
+                            Button { onPaste(item, .plainText) } label: {
                                 Image(systemName: "doc.on.clipboard")
                                     .font(.system(size: 14, weight: .semibold))
                                     .foregroundColor(.blue)
@@ -287,21 +287,23 @@ private struct ItemCardView: View, Equatable {
                                 hoverPaste = h
                                 if h { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }
                             }
-                            .help(L("timeline.help.copy"))
+                            .help(L("timeline.help.copyPlain"))
 
-                            Button { onPaste(item, true) } label: {
-                                Image(systemName: "textformat")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.teal)
-                                    .scaleEffect(hoverPlain ? 1.2 : 1.0)
-                                    .animation(.spring(response: 0.2, dampingFraction: 0.85), value: hoverPlain)
+                            if item.canPreserveFormatting {
+                                Button { onPaste(item, .preserveFormatting) } label: {
+                                    Image(systemName: "doc.richtext")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(.teal)
+                                        .scaleEffect(hoverPlain ? 1.2 : 1.0)
+                                        .animation(.spring(response: 0.2, dampingFraction: 0.85), value: hoverPlain)
+                                }
+                                .buttonStyle(.borderless)
+                                .onHover { h in
+                                    hoverPlain = h
+                                    if h { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }
+                                }
+                                .help(L("timeline.help.copyFormatted"))
                             }
-                            .buttonStyle(.borderless)
-                            .onHover { h in
-                                hoverPlain = h
-                                if h { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }
-                            }
-                            .help(L("timeline.help.pastePlain"))
 
                             Button { onDirectPaste(item) } label: {
                                 Image(systemName: "keyboard")
@@ -414,7 +416,7 @@ private struct ItemCardView: View, Equatable {
     }
     private func loadPlainString(_ url: URL) -> String? {
         if let d = try? Data(contentsOf: url), let s = String(data: d, encoding: .utf8) { return s }
-        return try? String(contentsOf: url)
+        return try? String(contentsOf: url, encoding: .utf8)
     }
     @ViewBuilder private var contentPreview: some View {
         switch item.type {
