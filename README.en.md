@@ -8,6 +8,7 @@ Lightweight, elegant macOS clipboard manager. Capture history, browse by timelin
 - History capture: Automatically collects text, links, images, files, colors, and more
 - Timeline browsing: Horizontal list, vertical list, and grid layouts; quick preview and rename
 - Pinboards and groups: Create/rename/color pinboards; history and pins are separate
+- One-click favorites: Use the star on a card to keep it indefinitely in the built-in Favorites board
 - Direct paste: Double-click to quick copy/paste, with plain-text or preserved HTML/RTF formatting
 - Search and filters: Keyword + type/source-app filters, instant-as-you-type search
 - Settings and shortcuts: History retention period, layout toggle, shortcut mapping, panel position adjustment

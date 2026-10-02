@@ -8,6 +8,7 @@ public final class IndexStore: IndexStoreProtocol {
     private var contentCache: [UUID: String] = [:]
     private let queue = DispatchQueue(label: "store.queue", qos: .userInitiated)
     public private(set) var defaultBoardID: UUID
+    public private(set) var favoritesBoardID: UUID
     private let indexURL: URL
     private let contentDir: URL
     private let decoder = JSONDecoder()
@@ -17,6 +18,7 @@ public final class IndexStore: IndexStoreProtocol {
         var items: [ClipItem]
         var pinboards: [Pinboard]
         var boardItems: [UUID: [UUID]]
+        var favoritesBoardID: UUID?
     }
     public init() {
         let appDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!.appendingPathComponent("MiniClipboard")
@@ -26,6 +28,7 @@ public final class IndexStore: IndexStoreProtocol {
         self.indexURL = appDir.appendingPathComponent("index.json")
         self.pinboards = []
         self.defaultBoardID = UUID()
+        self.favoritesBoardID = UUID()
         loadSnapshot()
         let s = settingsStore.load()
         queue.sync {
@@ -136,6 +139,10 @@ public final class IndexStore: IndexStoreProtocol {
             var set = boardItems[boardID] ?? []
             set.insert(id)
             boardItems[boardID] = set
+            if boardID == favoritesBoardID,
+               let index = items.firstIndex(where: { $0.id == id }) {
+                items[index].isPinned = true
+            }
             persist()
         }
     }
@@ -144,6 +151,10 @@ public final class IndexStore: IndexStoreProtocol {
             var set = boardItems[boardID] ?? []
             set.remove(id)
             boardItems[boardID] = set
+            if boardID == favoritesBoardID,
+               let index = items.firstIndex(where: { $0.id == id }) {
+                items[index].isPinned = false
+            }
             persist()
         }
     }
@@ -154,7 +165,7 @@ public final class IndexStore: IndexStoreProtocol {
         return b.id
     }
     public func updatePinboardName(_ id: UUID, name: String) {
-        guard id != defaultBoardID else { return }
+        guard id != defaultBoardID, id != favoritesBoardID else { return }
         queue.sync {
             if let i = pinboards.firstIndex(where: { $0.id == id }) {
                 pinboards[i].name = name
@@ -163,7 +174,7 @@ public final class IndexStore: IndexStoreProtocol {
         }
     }
     public func updatePinboardColor(_ id: UUID, color: String?) {
-        guard id != defaultBoardID else { return }
+        guard id != defaultBoardID, id != favoritesBoardID else { return }
         queue.sync {
             if let i = pinboards.firstIndex(where: { $0.id == id }) {
                 pinboards[i].color = color
@@ -172,7 +183,7 @@ public final class IndexStore: IndexStoreProtocol {
         }
     }
     public func deletePinboard(_ id: UUID) throws {
-        guard id != defaultBoardID else { return }
+        guard id != defaultBoardID, id != favoritesBoardID else { return }
         pinboards.removeAll { $0.id == id }
         boardItems[id] = nil
         persist()
@@ -227,19 +238,43 @@ public final class IndexStore: IndexStoreProtocol {
                 pinboards.insert(def, at: 0)
                 persist()
             }
+            if let savedID = snap.favoritesBoardID,
+               pinboards.contains(where: { $0.id == savedID }) {
+                self.favoritesBoardID = savedID
+            } else if let existing = pinboards.first(where: { $0.name == "收藏" || $0.name == "Favorites" }) {
+                self.favoritesBoardID = existing.id
+            } else {
+                let nextOrder = (pinboards.map(\.order).max() ?? 0) + 1
+                let favorites = Pinboard(name: "收藏", color: "yellow", order: nextOrder)
+                self.favoritesBoardID = favorites.id
+                pinboards.append(favorites)
+            }
+            reconcileFavorites()
+            persist()
         } else {
             self.items = []
             let def = Pinboard(name: "剪贴板", color: nil, order: 0)
+            let favorites = Pinboard(name: "收藏", color: "yellow", order: 1)
             self.defaultBoardID = def.id
-            self.pinboards = [def]
-            self.boardItems = [:]
+            self.favoritesBoardID = favorites.id
+            self.pinboards = [def, favorites]
+            self.boardItems = [favorites.id: []]
             persist()
         }
     }
 
+    private func reconcileFavorites() {
+        var favoriteIDs = boardItems[favoritesBoardID] ?? []
+        for item in items where item.isPinned { favoriteIDs.insert(item.id) }
+        for index in items.indices {
+            items[index].isPinned = favoriteIDs.contains(items[index].id)
+        }
+        boardItems[favoritesBoardID] = favoriteIDs
+    }
+
     private func persist() {
         let mapped = boardItems.mapValues { Array($0) }
-        let snap = Snapshot(items: items, pinboards: pinboards, boardItems: mapped)
+        let snap = Snapshot(items: items, pinboards: pinboards, boardItems: mapped, favoritesBoardID: favoritesBoardID)
         if let d = try? encoder.encode(snap) { try? d.write(to: indexURL) }
     }
 
@@ -263,7 +298,7 @@ public final class IndexStore: IndexStoreProtocol {
 
     private func cleanupExpiredItems(days: Int) {
         let cutoff = Date().addingTimeInterval(-Double(days) * 24 * 3600)
-        let pinned = Set(boardItems.values.flatMap { $0 })
+        let pinned = Set(boardItems.values.flatMap { $0 }).union(items.filter(\.isPinned).map(\.id))
         let beforeCount = items.count
         items.removeAll { !pinned.contains($0.id) && $0.copiedAt < cutoff }
         let existing = Set(items.map { $0.id })
@@ -272,7 +307,7 @@ public final class IndexStore: IndexStoreProtocol {
     }
 
     private func cleanupExceededItems(limit: Int) {
-        let pinned = Set(boardItems.values.flatMap { $0 })
+        let pinned = Set(boardItems.values.flatMap { $0 }).union(items.filter(\.isPinned).map(\.id))
         if limit <= 0 {
             let beforeCount = items.count
             items.removeAll { !pinned.contains($0.id) }

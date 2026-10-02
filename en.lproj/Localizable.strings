@@ -47,6 +47,8 @@
 "toast.copied" = "Copied to clipboard";
 "toast.copiedFormatted" = "Copied with formatting";
 "toast.addedToBoard" = "Added to board";
+"toast.addedToFavorites" = "Added to Favorites and kept indefinitely";
+"toast.removedFromFavorites" = "Removed from Favorites";
 "toast.deleted" = "Deleted";
 "permission.inputMonitoring" = "Input monitoring permission required";
 
@@ -61,6 +63,8 @@
 "timeline.help.pastePlain" = "Paste as plain text";
 "timeline.help.delete" = "Delete";
 "timeline.help.addToBoard" = "Add to board";
+"timeline.help.favorite" = "Favorite and keep indefinitely";
+"timeline.help.unfavorite" = "Remove from Favorites";
 
 "panel.newBoard.title" = "New Board";
 "panel.name.placeholder" = "Name";
@@ -91,6 +95,8 @@
 "panel.enterAction.help" = "Enter uses defaults; Shift+Enter forces plain text; Option+Enter keeps formatting";
 
 "boards.default.displayName" = "Clipboard";
+"boards.favorites.displayName" = "Favorites";
+"panel.builtInBoard.uneditable" = "Built-in boards cannot be edited";
 "preview.json.format" = "Format JSON";
 "preview.json.unformat" = "Unformat";
 "preview.time.convert" = "Convert Time";

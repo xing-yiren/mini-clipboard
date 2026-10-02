@@ -20,6 +20,7 @@ public struct HistoryTimelineView: View {
     public let currentBoardID: UUID?
     public let onPaste: (ClipItem, TextFormatMode) -> Void
     public let onAddToBoard: (ClipItem, UUID) -> Void
+    public let onToggleFavorite: (ClipItem) -> Void
     public let onDelete: (ClipItem) -> Void
     public let selectedItemID: UUID?
     public let onSelect: (ClipItem) -> Void
@@ -31,13 +32,14 @@ public struct HistoryTimelineView: View {
     public let onDefaultAction: (ClipItem) -> Void
     public let onDirectPaste: (ClipItem) -> Void
     @AppStorage("historyLayoutStyle") private var layoutStyleRaw: String = "horizontal"
-    public init(items: [ClipItem], boards: [Pinboard], defaultBoardID: UUID, currentBoardID: UUID?, onPaste: @escaping (ClipItem, TextFormatMode) -> Void, onAddToBoard: @escaping (ClipItem, UUID) -> Void, onDelete: @escaping (ClipItem) -> Void, selectedItemID: UUID?, onSelect: @escaping (ClipItem) -> Void, onRename: @escaping (ClipItem, String) -> Void, scrollOnSelection: Bool, selectedIDs: Set<UUID>, selectedOrder: [UUID], selectionMode: Bool, onDefaultAction: @escaping (ClipItem) -> Void, onDirectPaste: @escaping (ClipItem) -> Void, onSelectedItemFrame: ((CGRect?) -> Void)? = nil) {
+    public init(items: [ClipItem], boards: [Pinboard], defaultBoardID: UUID, currentBoardID: UUID?, onPaste: @escaping (ClipItem, TextFormatMode) -> Void, onAddToBoard: @escaping (ClipItem, UUID) -> Void, onToggleFavorite: @escaping (ClipItem) -> Void, onDelete: @escaping (ClipItem) -> Void, selectedItemID: UUID?, onSelect: @escaping (ClipItem) -> Void, onRename: @escaping (ClipItem, String) -> Void, scrollOnSelection: Bool, selectedIDs: Set<UUID>, selectedOrder: [UUID], selectionMode: Bool, onDefaultAction: @escaping (ClipItem) -> Void, onDirectPaste: @escaping (ClipItem) -> Void, onSelectedItemFrame: ((CGRect?) -> Void)? = nil) {
         self.items = items
         self.boards = boards
         self.defaultBoardID = defaultBoardID
         self.currentBoardID = currentBoardID
         self.onPaste = onPaste
         self.onAddToBoard = onAddToBoard
+        self.onToggleFavorite = onToggleFavorite
         self.onDelete = onDelete
         self.selectedItemID = selectedItemID
         self.onSelect = onSelect
@@ -61,7 +63,7 @@ public struct HistoryTimelineView: View {
                     ScrollView(.horizontal) {
                         LazyHStack(spacing: 12) {
                             ForEach(displayedItems) { item in
-                                ItemCardView(item: item, boards: boards, defaultBoardID: defaultBoardID, currentBoardID: currentBoardID, onPaste: onPaste, onAddToBoard: onAddToBoard, onDelete: onDelete, selected: (selectedItemID == item.id), multiSelected: selectedIDs.contains(item.id), selectionMode: selectionMode, selectionOrder: selectedOrder, onSelect: onSelect, onRename: onRename, onDefaultAction: onDefaultAction, onDirectPaste: onDirectPaste, cardWidth: cardWidth)
+                                ItemCardView(item: item, boards: boards, defaultBoardID: defaultBoardID, currentBoardID: currentBoardID, onPaste: onPaste, onAddToBoard: onAddToBoard, onToggleFavorite: onToggleFavorite, onDelete: onDelete, selected: (selectedItemID == item.id), multiSelected: selectedIDs.contains(item.id), selectionMode: selectionMode, selectionOrder: selectedOrder, onSelect: onSelect, onRename: onRename, onDefaultAction: onDefaultAction, onDirectPaste: onDirectPaste, cardWidth: cardWidth)
                                     .equatable()
                                     .id(item.id)
                                     .background(
@@ -90,7 +92,7 @@ public struct HistoryTimelineView: View {
                     ScrollView {
                         LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 12) {
                             ForEach(displayedItems) { item in
-                                ItemCardView(item: item, boards: boards, defaultBoardID: defaultBoardID, currentBoardID: currentBoardID, onPaste: onPaste, onAddToBoard: onAddToBoard, onDelete: onDelete, selected: (selectedItemID == item.id), multiSelected: selectedIDs.contains(item.id), selectionMode: selectionMode, selectionOrder: selectedOrder, onSelect: onSelect, onRename: onRename, onDefaultAction: onDefaultAction, onDirectPaste: onDirectPaste, cardWidth: cardWidth)
+                                ItemCardView(item: item, boards: boards, defaultBoardID: defaultBoardID, currentBoardID: currentBoardID, onPaste: onPaste, onAddToBoard: onAddToBoard, onToggleFavorite: onToggleFavorite, onDelete: onDelete, selected: (selectedItemID == item.id), multiSelected: selectedIDs.contains(item.id), selectionMode: selectionMode, selectionOrder: selectedOrder, onSelect: onSelect, onRename: onRename, onDefaultAction: onDefaultAction, onDirectPaste: onDirectPaste, cardWidth: cardWidth)
                                     .equatable()
                                     .id(item.id)
                                     .background(
@@ -118,7 +120,7 @@ public struct HistoryTimelineView: View {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 12) {
                             ForEach(displayedItems) { item in
-                                ItemCardView(item: item, boards: boards, defaultBoardID: defaultBoardID, currentBoardID: currentBoardID, onPaste: onPaste, onAddToBoard: onAddToBoard, onDelete: onDelete, selected: (selectedItemID == item.id), multiSelected: selectedIDs.contains(item.id), selectionMode: selectionMode, selectionOrder: selectedOrder, onSelect: onSelect, onRename: onRename, onDefaultAction: onDefaultAction, onDirectPaste: onDirectPaste, cardWidth: cardWidth)
+                                ItemCardView(item: item, boards: boards, defaultBoardID: defaultBoardID, currentBoardID: currentBoardID, onPaste: onPaste, onAddToBoard: onAddToBoard, onToggleFavorite: onToggleFavorite, onDelete: onDelete, selected: (selectedItemID == item.id), multiSelected: selectedIDs.contains(item.id), selectionMode: selectionMode, selectionOrder: selectedOrder, onSelect: onSelect, onRename: onRename, onDefaultAction: onDefaultAction, onDirectPaste: onDirectPaste, cardWidth: cardWidth)
                                     .equatable()
                                     .id(item.id)
                                     .background(
@@ -192,6 +194,7 @@ private struct ItemCardView: View, Equatable {
     let currentBoardID: UUID?
     let onPaste: (ClipItem, TextFormatMode) -> Void
     let onAddToBoard: (ClipItem, UUID) -> Void
+    let onToggleFavorite: (ClipItem) -> Void
     let onDelete: (ClipItem) -> Void
     let selected: Bool
     let multiSelected: Bool
@@ -394,15 +397,28 @@ private struct ItemCardView: View, Equatable {
                 }
             }
             .overlay(alignment: .topTrailing) {
-                if let img = appIcon {
-                    Image(nsImage: img)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 24, height: 24)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.8), lineWidth: 1))
-                        .padding(6)
+                HStack(spacing: 5) {
+                    Button { onToggleFavorite(item) } label: {
+                        Image(systemName: item.isPinned ? "star.fill" : "star")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(item.isPinned ? .yellow : .white)
+                            .frame(width: 24, height: 24)
+                            .background(Color.black.opacity(0.18), in: Circle())
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .help(L(item.isPinned ? "timeline.help.unfavorite" : "timeline.help.favorite"))
+
+                    if let img = appIcon {
+                        Image(nsImage: img)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 24, height: 24)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.8), lineWidth: 1))
+                    }
                 }
+                .padding(6)
             }
             .shadow(color: isSelected ? headerPalette.main.opacity(0.4) : AppTheme.shadowColor, radius: isSelected ? 8 : AppTheme.shadowRadius, x: 0, y: isSelected ? 0 : AppTheme.shadowY)
             // .shadow(color: shadowColor, radius: hovering ? 8 : 4, x: 0, y: hovering ? 6 : 3)

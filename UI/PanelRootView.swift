@@ -309,8 +309,8 @@ struct PanelRootView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                             .contentShape(Rectangle())
                             .contextMenu {
-                                if b.id == controller.store.defaultBoardID {
-                                    Text(L("panel.defaultBoard.uneditable"))
+                                if b.id == controller.store.defaultBoardID || b.id == controller.store.favoritesBoardID {
+                                    Text(L("panel.builtInBoard.uneditable"))
                                 } else {
                                     Button(L("panel.editName")) { editingBoard = b; renameInput = b.name; showRenamePopover = true }
                                     Button(L("panel.changeColor")) { editingBoard = b; colorInput = b.color ?? ""; showColorPopover = true }
@@ -538,7 +538,7 @@ struct PanelRootView: View {
     private var mainArea: some View {
         ZStack(alignment: .topLeading) {
             VStack(spacing: 0) {
-                HistoryTimelineView(items: controller.items, boards: controller.boards, defaultBoardID: controller.store.defaultBoardID, currentBoardID: controller.selectedBoardID, onPaste: { item, format in controller.pasteItem(item, format: format) }, onAddToBoard: { item, bid in controller.addToBoard(item, bid) }, onDelete: { item in controller.deleteItem(item) }, selectedItemID: controller.selectedItemID, onSelect: { item in controller.onItemTapped(item) }, onRename: { item, name in controller.renameItem(item, name: name) }, scrollOnSelection: controller.selectionByKeyboard, selectedIDs: controller.selectedIDs, selectedOrder: controller.selectedOrder, selectionMode: controller.selectionMode, onDefaultAction: { item in controller.onDefaultAction(item) }, onDirectPaste: { item in controller.directPasteItem(item) }, onSelectedItemFrame: { rect in
+                HistoryTimelineView(items: controller.items, boards: controller.boards, defaultBoardID: controller.store.defaultBoardID, currentBoardID: controller.selectedBoardID, onPaste: { item, format in controller.pasteItem(item, format: format) }, onAddToBoard: { item, bid in controller.addToBoard(item, bid) }, onToggleFavorite: { item in controller.toggleFavorite(item) }, onDelete: { item in controller.deleteItem(item) }, selectedItemID: controller.selectedItemID, onSelect: { item in controller.onItemTapped(item) }, onRename: { item, name in controller.renameItem(item, name: name) }, scrollOnSelection: controller.selectionByKeyboard, selectedIDs: controller.selectedIDs, selectedOrder: controller.selectedOrder, selectionMode: controller.selectionMode, onDefaultAction: { item in controller.onDefaultAction(item) }, onDirectPaste: { item in controller.directPasteItem(item) }, onSelectedItemFrame: { rect in
                     if let rect, let win = NSApp.keyWindow ?? NSApp.windows.first {
                         let windowHeight = win.contentView?.bounds.height ?? win.frame.size.height
                         let cocoaY = windowHeight - (rect.origin.y + rect.size.height)
@@ -594,6 +594,7 @@ struct PanelRootView: View {
     }
     private func boardDisplayName(_ b: Pinboard) -> String {
         if b.id == controller.store.defaultBoardID && b.name == "剪贴板" { return L("boards.default.displayName") }
+        if b.id == controller.store.favoritesBoardID { return L("boards.favorites.displayName") }
         return b.name
     }
     private func reportSearchFrame(_ geo: GeometryProxy) {

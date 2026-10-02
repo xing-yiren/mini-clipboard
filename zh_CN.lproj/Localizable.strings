@@ -47,6 +47,8 @@
 "toast.copied" = "已复制到剪贴板";
 "toast.copiedFormatted" = "已复制并保留格式";
 "toast.addedToBoard" = "已添加到分组";
+"toast.addedToFavorites" = "已收藏，将长期保留";
+"toast.removedFromFavorites" = "已取消收藏";
 "toast.deleted" = "已删除";
 "permission.inputMonitoring" = "需要输入监控权限";
 
@@ -61,6 +63,8 @@
 "timeline.help.pastePlain" = "以纯文本复制";
 "timeline.help.delete" = "删除";
 "timeline.help.addToBoard" = "添加至分组";
+"timeline.help.favorite" = "收藏并长期保留";
+"timeline.help.unfavorite" = "取消收藏";
 
 "panel.newBoard.title" = "新增收藏分组";
 "panel.name.placeholder" = "名称";
@@ -91,6 +95,8 @@
 "panel.enterAction.help" = "Enter 使用默认设置；Shift+Enter 强制纯文本；Option+Enter 强制保留格式";
 
 "boards.default.displayName" = "剪贴板";
+"boards.favorites.displayName" = "收藏";
+"panel.builtInBoard.uneditable" = "内置分组不可编辑";
 "preview.json.format" = "格式化 JSON";
 "preview.json.unformat" = "取消格式化";
 "preview.time.convert" = "转换时间";

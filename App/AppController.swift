@@ -373,6 +373,16 @@ final class AppController: ObservableObject {
         refresh()
         panel.showToast(L("toast.addedToBoard"))
     }
+    func toggleFavorite(_ item: ClipItem) {
+        if item.isPinned {
+            try? store.unpin(item.id, from: store.favoritesBoardID)
+            panel.showToast(L("toast.removedFromFavorites"))
+        } else {
+            try? store.pin(item.id, to: store.favoritesBoardID)
+            panel.showToast(L("toast.addedToFavorites"))
+        }
+        refresh()
+    }
     func deleteItem(_ item: ClipItem) {
         try? store.delete(item.id)
         if selectedItemID == item.id { selectedItemID = nil }
