@@ -41,9 +41,11 @@ public final class IndexStore: IndexStoreProtocol {
             let persisted = ensurePermanentContent(item)
             if let index = items.firstIndex(where: { $0.id == persisted.id || isDuplicate($0, persisted) }) {
                 let existing = items.remove(at: index)
+                let isExplicitUpdate = existing.id == persisted.id
                 // Keep the stable ID so Pinboard membership survives when the same
                 // content is copied again. Refresh the capture details and timestamp,
-                // while preserving the user's name, tags and pinned state.
+                // while preserving user metadata for newly captured duplicates.
+                // Explicit edits to an existing item use the values being saved.
                 let refreshed = ClipItem(
                     id: existing.id,
                     type: persisted.type,
@@ -52,9 +54,9 @@ public final class IndexStore: IndexStoreProtocol {
                     sourceApp: persisted.sourceApp,
                     copiedAt: persisted.copiedAt,
                     metadata: persisted.metadata,
-                    tags: existing.tags,
-                    isPinned: existing.isPinned,
-                    name: existing.name
+                    tags: isExplicitUpdate ? persisted.tags : existing.tags,
+                    isPinned: isExplicitUpdate ? persisted.isPinned : existing.isPinned,
+                    name: isExplicitUpdate ? persisted.name : existing.name
                 )
                 items.insert(refreshed, at: 0)
                 contentCache[existing.id] = nil
