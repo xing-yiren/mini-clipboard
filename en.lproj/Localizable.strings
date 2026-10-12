@@ -65,6 +65,7 @@
 "timeline.help.pastePlain" = "Paste as plain text";
 "timeline.help.delete" = "Delete";
 "timeline.help.addToBoard" = "Add to board";
+"timeline.noCustomBoards" = "No custom boards. Use + in the sidebar to create one.";
 "timeline.help.favorite" = "Favorite and keep indefinitely";
 "timeline.help.unfavorite" = "Remove from Favorites";
 

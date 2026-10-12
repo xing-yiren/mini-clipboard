@@ -17,6 +17,7 @@ public struct HistoryTimelineView: View {
     public let items: [ClipItem]
     public let boards: [Pinboard]
     public let defaultBoardID: UUID
+    public let favoritesBoardID: UUID
     public let currentBoardID: UUID?
     public let onPaste: (ClipItem, TextFormatMode) -> Void
     public let onAddToBoard: (ClipItem, UUID) -> Void
@@ -32,10 +33,11 @@ public struct HistoryTimelineView: View {
     public let onDefaultAction: (ClipItem) -> Void
     public let onDirectPaste: (ClipItem) -> Void
     @AppStorage("historyLayoutStyle") private var layoutStyleRaw: String = "horizontal"
-    public init(items: [ClipItem], boards: [Pinboard], defaultBoardID: UUID, currentBoardID: UUID?, onPaste: @escaping (ClipItem, TextFormatMode) -> Void, onAddToBoard: @escaping (ClipItem, UUID) -> Void, onToggleFavorite: @escaping (ClipItem) -> Void, onDelete: @escaping (ClipItem) -> Void, selectedItemID: UUID?, onSelect: @escaping (ClipItem) -> Void, onRename: @escaping (ClipItem, String) -> Void, scrollOnSelection: Bool, selectedIDs: Set<UUID>, selectedOrder: [UUID], selectionMode: Bool, onDefaultAction: @escaping (ClipItem) -> Void, onDirectPaste: @escaping (ClipItem) -> Void, onSelectedItemFrame: ((CGRect?) -> Void)? = nil) {
+    public init(items: [ClipItem], boards: [Pinboard], defaultBoardID: UUID, favoritesBoardID: UUID, currentBoardID: UUID?, onPaste: @escaping (ClipItem, TextFormatMode) -> Void, onAddToBoard: @escaping (ClipItem, UUID) -> Void, onToggleFavorite: @escaping (ClipItem) -> Void, onDelete: @escaping (ClipItem) -> Void, selectedItemID: UUID?, onSelect: @escaping (ClipItem) -> Void, onRename: @escaping (ClipItem, String) -> Void, scrollOnSelection: Bool, selectedIDs: Set<UUID>, selectedOrder: [UUID], selectionMode: Bool, onDefaultAction: @escaping (ClipItem) -> Void, onDirectPaste: @escaping (ClipItem) -> Void, onSelectedItemFrame: ((CGRect?) -> Void)? = nil) {
         self.items = items
         self.boards = boards
         self.defaultBoardID = defaultBoardID
+        self.favoritesBoardID = favoritesBoardID
         self.currentBoardID = currentBoardID
         self.onPaste = onPaste
         self.onAddToBoard = onAddToBoard
@@ -63,7 +65,7 @@ public struct HistoryTimelineView: View {
                     ScrollView(.horizontal) {
                         LazyHStack(spacing: 12) {
                             ForEach(displayedItems) { item in
-                                ItemCardView(item: item, boards: boards, defaultBoardID: defaultBoardID, currentBoardID: currentBoardID, onPaste: onPaste, onAddToBoard: onAddToBoard, onToggleFavorite: onToggleFavorite, onDelete: onDelete, selected: (selectedItemID == item.id), multiSelected: selectedIDs.contains(item.id), selectionMode: selectionMode, selectionOrder: selectedOrder, onSelect: onSelect, onRename: onRename, onDefaultAction: onDefaultAction, onDirectPaste: onDirectPaste, cardWidth: cardWidth)
+                                ItemCardView(item: item, boards: boards, defaultBoardID: defaultBoardID, favoritesBoardID: favoritesBoardID, currentBoardID: currentBoardID, onPaste: onPaste, onAddToBoard: onAddToBoard, onToggleFavorite: onToggleFavorite, onDelete: onDelete, selected: (selectedItemID == item.id), multiSelected: selectedIDs.contains(item.id), selectionMode: selectionMode, selectionOrder: selectedOrder, onSelect: onSelect, onRename: onRename, onDefaultAction: onDefaultAction, onDirectPaste: onDirectPaste, cardWidth: cardWidth)
                                     .equatable()
                                     .id(item.id)
                                     .background(
@@ -92,7 +94,7 @@ public struct HistoryTimelineView: View {
                     ScrollView {
                         LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 12) {
                             ForEach(displayedItems) { item in
-                                ItemCardView(item: item, boards: boards, defaultBoardID: defaultBoardID, currentBoardID: currentBoardID, onPaste: onPaste, onAddToBoard: onAddToBoard, onToggleFavorite: onToggleFavorite, onDelete: onDelete, selected: (selectedItemID == item.id), multiSelected: selectedIDs.contains(item.id), selectionMode: selectionMode, selectionOrder: selectedOrder, onSelect: onSelect, onRename: onRename, onDefaultAction: onDefaultAction, onDirectPaste: onDirectPaste, cardWidth: cardWidth)
+                                ItemCardView(item: item, boards: boards, defaultBoardID: defaultBoardID, favoritesBoardID: favoritesBoardID, currentBoardID: currentBoardID, onPaste: onPaste, onAddToBoard: onAddToBoard, onToggleFavorite: onToggleFavorite, onDelete: onDelete, selected: (selectedItemID == item.id), multiSelected: selectedIDs.contains(item.id), selectionMode: selectionMode, selectionOrder: selectedOrder, onSelect: onSelect, onRename: onRename, onDefaultAction: onDefaultAction, onDirectPaste: onDirectPaste, cardWidth: cardWidth)
                                     .equatable()
                                     .id(item.id)
                                     .background(
@@ -120,7 +122,7 @@ public struct HistoryTimelineView: View {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 12) {
                             ForEach(displayedItems) { item in
-                                ItemCardView(item: item, boards: boards, defaultBoardID: defaultBoardID, currentBoardID: currentBoardID, onPaste: onPaste, onAddToBoard: onAddToBoard, onToggleFavorite: onToggleFavorite, onDelete: onDelete, selected: (selectedItemID == item.id), multiSelected: selectedIDs.contains(item.id), selectionMode: selectionMode, selectionOrder: selectedOrder, onSelect: onSelect, onRename: onRename, onDefaultAction: onDefaultAction, onDirectPaste: onDirectPaste, cardWidth: cardWidth)
+                                ItemCardView(item: item, boards: boards, defaultBoardID: defaultBoardID, favoritesBoardID: favoritesBoardID, currentBoardID: currentBoardID, onPaste: onPaste, onAddToBoard: onAddToBoard, onToggleFavorite: onToggleFavorite, onDelete: onDelete, selected: (selectedItemID == item.id), multiSelected: selectedIDs.contains(item.id), selectionMode: selectionMode, selectionOrder: selectedOrder, onSelect: onSelect, onRename: onRename, onDefaultAction: onDefaultAction, onDirectPaste: onDirectPaste, cardWidth: cardWidth)
                                     .equatable()
                                     .id(item.id)
                                     .background(
@@ -191,6 +193,7 @@ private struct ItemCardView: View, Equatable {
     let item: ClipItem
     let boards: [Pinboard]
     let defaultBoardID: UUID
+    let favoritesBoardID: UUID
     let currentBoardID: UUID?
     let onPaste: (ClipItem, TextFormatMode) -> Void
     let onAddToBoard: (ClipItem, UUID) -> Void
@@ -213,6 +216,7 @@ private struct ItemCardView: View, Equatable {
     @State private var hoverDirectPaste = false
     @State private var hoverPlain = false
     @State private var hoverDelete = false
+    @State private var hoverFavorite = false
     @State private var hoverMenu = false
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
@@ -322,28 +326,32 @@ private struct ItemCardView: View, Equatable {
                             }
                             .help(L("timeline.help.directPaste"))
 
-                            Button { onDelete(item) } label: {
-                                Image(systemName: "trash")
+                            Button { onToggleFavorite(item) } label: {
+                                Image(systemName: item.isPinned ? "star.fill" : "star")
                                     .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.red)
-                                    .scaleEffect(hoverDelete ? 1.2 : 1.0)
-                                    .animation(.spring(response: 0.2, dampingFraction: 0.85), value: hoverDelete)
+                                    .foregroundColor(item.isPinned ? .yellow : .secondary)
+                                    .scaleEffect(hoverFavorite ? 1.2 : 1.0)
+                                    .animation(.spring(response: 0.2, dampingFraction: 0.85), value: hoverFavorite)
                             }
                             .buttonStyle(.borderless)
                             .onHover { h in
-                                hoverDelete = h
+                                hoverFavorite = h
                                 if h { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }
                             }
-                            .help(L("timeline.help.delete"))
+                            .help(L(item.isPinned ? "timeline.help.unfavorite" : "timeline.help.favorite"))
 
                             Menu {
-                                ForEach(boards.filter { $0.id != defaultBoardID }) { b in
-                                    Button(action: { onAddToBoard(item, b.id) }) {
-                                        HStack(spacing: 8) {
-                                            Circle()
-                                                .fill(boardColor(b))
-                                                .frame(width: 8, height: 8)
-                                            Text(b.name)
+                                if customBoards.isEmpty {
+                                    Text(L("timeline.noCustomBoards"))
+                                } else {
+                                    ForEach(customBoards) { b in
+                                        Button(action: { onAddToBoard(item, b.id) }) {
+                                            HStack(spacing: 8) {
+                                                Circle()
+                                                    .fill(boardColor(b))
+                                                    .frame(width: 8, height: 8)
+                                                Text(b.name)
+                                            }
                                         }
                                     }
                                 }
@@ -361,6 +369,20 @@ private struct ItemCardView: View, Equatable {
                                 if h { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }
                             }
                             .help(L("timeline.help.addToBoard"))
+
+                            Button { onDelete(item) } label: {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.red)
+                                    .scaleEffect(hoverDelete ? 1.2 : 1.0)
+                                    .animation(.spring(response: 0.2, dampingFraction: 0.85), value: hoverDelete)
+                            }
+                            .buttonStyle(.borderless)
+                            .onHover { h in
+                                hoverDelete = h
+                                if h { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }
+                            }
+                            .help(L("timeline.help.delete"))
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
@@ -397,28 +419,15 @@ private struct ItemCardView: View, Equatable {
                 }
             }
             .overlay(alignment: .topTrailing) {
-                HStack(spacing: 5) {
-                    Button { onToggleFavorite(item) } label: {
-                        Image(systemName: item.isPinned ? "star.fill" : "star")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(item.isPinned ? .yellow : .white)
-                            .frame(width: 24, height: 24)
-                            .background(Color.black.opacity(0.18), in: Circle())
-                            .contentShape(Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .help(L(item.isPinned ? "timeline.help.unfavorite" : "timeline.help.favorite"))
-
-                    if let img = appIcon {
-                        Image(nsImage: img)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 24, height: 24)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.8), lineWidth: 1))
-                    }
+                if let img = appIcon {
+                    Image(nsImage: img)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 24, height: 24)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.8), lineWidth: 1))
+                        .padding(6)
                 }
-                .padding(6)
             }
             .shadow(color: isSelected ? headerPalette.main.opacity(0.4) : AppTheme.shadowColor, radius: isSelected ? 8 : AppTheme.shadowRadius, x: 0, y: isSelected ? 0 : AppTheme.shadowY)
             // .shadow(color: shadowColor, radius: hovering ? 8 : 4, x: 0, y: hovering ? 6 : 3)
@@ -429,6 +438,9 @@ private struct ItemCardView: View, Equatable {
             .highPriorityGesture(TapGesture(count: 2).onEnded { onDefaultAction(item) })
             .simultaneousGesture(TapGesture(count: 1).onEnded { onSelect(item) })
         }
+    }
+    private var customBoards: [Pinboard] {
+        boards.filter { $0.id != defaultBoardID && $0.id != favoritesBoardID }
     }
     private func loadPlainString(_ url: URL) -> String? {
         if let d = try? Data(contentsOf: url), let s = String(data: d, encoding: .utf8) { return s }

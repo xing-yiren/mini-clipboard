@@ -65,6 +65,7 @@
 "timeline.help.pastePlain" = "以纯文本复制";
 "timeline.help.delete" = "删除";
 "timeline.help.addToBoard" = "添加至分组";
+"timeline.noCustomBoards" = "暂无自定义分类，请点击左侧 + 创建";
 "timeline.help.favorite" = "收藏并长期保留";
 "timeline.help.unfavorite" = "取消收藏";
 
