@@ -39,6 +39,16 @@
 "panel.menu.panel" = "面板";
 "panel.menu.settings" = "设置";
 "panel.menu.quit" = "退出";
+"panel.toolbar.collapse" = "折叠左侧栏";
+"panel.toolbar.clearSearch" = "清空搜索";
+"panel.toolbar.newBoard" = "创建自定义分类";
+"panel.toolbar.switchToGrid" = "切换到网格布局";
+"panel.toolbar.switchToVertical" = "切换到纵向列表";
+"panel.toolbar.switchToHorizontal" = "切换到横向列表";
+"panel.toolbar.enterSelection" = "进入批量选择";
+"panel.toolbar.exitSelection" = "退出批量选择";
+"panel.toolbar.settings" = "打开设置";
+"panel.toolbar.search" = "搜索剪贴板内容";
 "alert.accessibility.title" = "需要辅助权限";
 "alert.accessibility.message" = "请在系统设置的隐私与安全 > 辅助功能中为 MiniClipboard 开启权限，以使用全局粘贴和自动隐藏等功能。";
 "alert.accessibility.openSettings" = "打开设置";

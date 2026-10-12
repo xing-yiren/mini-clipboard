@@ -48,6 +48,7 @@ struct PanelRootView: View {
     @State private var showColorPopover: Bool = false
     @State private var renameInput: String = ""
     @State private var colorInput: String = ""
+    @State private var hoveredToolbarHelp: String?
     @AppStorage("historyLayoutStyle") private var layoutStyleRaw: String = "horizontal"
     @AppStorage("panelPositionVertical") private var panelPositionVertical: Double = 0
     @AppStorage("panelPositionHorizontal") private var panelPositionHorizontal: Double = 0
@@ -116,6 +117,7 @@ struct PanelRootView: View {
                     .font(.system(size: 12, weight: .bold))
             }
             .buttonStyle(.borderless)
+            .onHover { hoveredToolbarHelp = $0 ? L("panel.toolbar.collapse") : nil }
             if !controller.query.isEmpty {
                 Button(action: { controller.query = ""; controller.refresh() }) {
                     Image(systemName: "xmark.circle.fill")
@@ -123,12 +125,14 @@ struct PanelRootView: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.borderless)
+                .onHover { hoveredToolbarHelp = $0 ? L("panel.toolbar.clearSearch") : nil }
             }
             Button(action: { showNewBoardPopover = true }) {
                 Image(systemName: "plus")
                     .font(.system(size: 12, weight: .bold))
             }
             .buttonStyle(.borderless)
+            .onHover { hoveredToolbarHelp = $0 ? L("panel.toolbar.newBoard") : nil }
             .popover(isPresented: $showNewBoardPopover) {
                 NewBoardPopoverContent(controller: controller,
                                        newBoardName: $newBoardName,
@@ -158,22 +162,25 @@ struct PanelRootView: View {
                     .font(.system(size: 12, weight: .bold))
             }
             .buttonStyle(.borderless)
+            .onHover { hoveredToolbarHelp = $0 ? nextLayoutHelp : nil }
             Button(action: { controller.toggleSelectionMode() }) {
                 Image(systemName: controller.selectionMode ? "checkmark.circle.fill" : "checkmark.circle")
                     .font(.system(size: 12, weight: .bold))
             }
             .buttonStyle(.borderless)
+            .onHover { hoveredToolbarHelp = $0 ? selectionModeHelp : nil }
             Spacer(minLength: 6)
             Button(action: { controller.openSettings() }) {
                 Image(systemName: "gearshape")
                     .font(.system(size: 12, weight: .semibold))
             }
             .buttonStyle(.borderless)
-            .help(L("panel.menu.settings"))
+            .onHover { hoveredToolbarHelp = $0 ? L("panel.toolbar.settings") : nil }
             Button(action: { controller.searchPopoverVisible = true }) {
                 Image(systemName: "magnifyingglass")
             }
             .buttonStyle(.borderless)
+            .onHover { hoveredToolbarHelp = $0 ? L("panel.toolbar.search") : nil }
             .popover(isPresented: $controller.searchPopoverVisible, attachmentAnchor: .rect(.bounds), arrowEdge: .leading) {
                 HStack(spacing: 8) {
                     TextField(L("panel.search.placeholder"), text: $controller.query)
@@ -207,6 +214,32 @@ struct PanelRootView: View {
                     }
             }
         )
+        .overlay(alignment: .bottom) {
+            if let help = hoveredToolbarHelp {
+                Text(help)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(Color.black.opacity(0.82))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .fixedSize()
+                    .offset(y: 30)
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
+        }
+        .zIndex(3)
+    }
+    private var nextLayoutHelp: String {
+        switch HistoryLayoutStyle(rawValue: layoutStyleRaw) ?? .horizontal {
+        case .horizontal: return L("panel.toolbar.switchToGrid")
+        case .grid: return L("panel.toolbar.switchToVertical")
+        case .vertical: return L("panel.toolbar.switchToHorizontal")
+        }
+    }
+    private var selectionModeHelp: String {
+        L(controller.selectionMode ? "panel.toolbar.exitSelection" : "panel.toolbar.enterSelection")
     }
     private var selectionContent: some View {
         ZStack(alignment: .topLeading) {

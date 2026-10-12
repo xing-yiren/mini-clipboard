@@ -39,6 +39,16 @@
 "panel.menu.panel" = "Panel";
 "panel.menu.settings" = "Settings";
 "panel.menu.quit" = "Quit";
+"panel.toolbar.collapse" = "Collapse sidebar";
+"panel.toolbar.clearSearch" = "Clear search";
+"panel.toolbar.newBoard" = "Create custom board";
+"panel.toolbar.switchToGrid" = "Switch to grid layout";
+"panel.toolbar.switchToVertical" = "Switch to vertical list";
+"panel.toolbar.switchToHorizontal" = "Switch to horizontal list";
+"panel.toolbar.enterSelection" = "Enter multi-select mode";
+"panel.toolbar.exitSelection" = "Exit multi-select mode";
+"panel.toolbar.settings" = "Open settings";
+"panel.toolbar.search" = "Search clipboard items";
 "alert.accessibility.title" = "Accessibility permission required";
 "alert.accessibility.message" = "Please enable MiniClipboard in System Settings > Privacy & Security > Accessibility to use global paste and auto-hide features.";
 "alert.accessibility.openSettings" = "Open Settings";

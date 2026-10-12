@@ -218,6 +218,7 @@ private struct ItemCardView: View, Equatable {
     @State private var hoverDelete = false
     @State private var hoverFavorite = false
     @State private var hoverMenu = false
+    @State private var hoveredActionHelp: String?
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             VStack(spacing: 0) {
@@ -292,9 +293,9 @@ private struct ItemCardView: View, Equatable {
                             .buttonStyle(.borderless)
                             .onHover { h in
                                 hoverPaste = h
+                                hoveredActionHelp = h ? L("timeline.help.copyPlain") : nil
                                 if h { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }
                             }
-                            .help(L("timeline.help.copyPlain"))
 
                             if item.canPreserveFormatting {
                                 Button { onPaste(item, .preserveFormatting) } label: {
@@ -307,9 +308,9 @@ private struct ItemCardView: View, Equatable {
                                 .buttonStyle(.borderless)
                                 .onHover { h in
                                     hoverPlain = h
+                                    hoveredActionHelp = h ? L("timeline.help.copyFormatted") : nil
                                     if h { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }
                                 }
-                                .help(L("timeline.help.copyFormatted"))
                             }
 
                             Button { onDirectPaste(item) } label: {
@@ -322,9 +323,9 @@ private struct ItemCardView: View, Equatable {
                             .buttonStyle(.borderless)
                             .onHover { h in
                                 hoverDirectPaste = h
+                                hoveredActionHelp = h ? L("timeline.help.directPaste") : nil
                                 if h { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }
                             }
-                            .help(L("timeline.help.directPaste"))
 
                             Button { onToggleFavorite(item) } label: {
                                 Image(systemName: item.isPinned ? "star.fill" : "star")
@@ -336,9 +337,9 @@ private struct ItemCardView: View, Equatable {
                             .buttonStyle(.borderless)
                             .onHover { h in
                                 hoverFavorite = h
+                                hoveredActionHelp = h ? L(item.isPinned ? "timeline.help.unfavorite" : "timeline.help.favorite") : nil
                                 if h { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }
                             }
-                            .help(L(item.isPinned ? "timeline.help.unfavorite" : "timeline.help.favorite"))
 
                             Menu {
                                 if customBoards.isEmpty {
@@ -366,9 +367,9 @@ private struct ItemCardView: View, Equatable {
                             .menuStyle(.borderlessButton)
                             .onHover { h in
                                 hoverMenu = h
+                                hoveredActionHelp = h ? L("timeline.help.addToBoard") : nil
                                 if h { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }
                             }
-                            .help(L("timeline.help.addToBoard"))
 
                             Button { onDelete(item) } label: {
                                 Image(systemName: "trash")
@@ -380,10 +381,26 @@ private struct ItemCardView: View, Equatable {
                             .buttonStyle(.borderless)
                             .onHover { h in
                                 hoverDelete = h
+                                hoveredActionHelp = h ? L("timeline.help.delete") : nil
                                 if h { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }
                             }
-                            .help(L("timeline.help.delete"))
                 }
+                .overlay(alignment: .top) {
+                    if let help = hoveredActionHelp {
+                        Text(help)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .background(Color.black.opacity(0.82))
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                            .fixedSize()
+                            .offset(y: -34)
+                            .allowsHitTesting(false)
+                            .transition(.opacity)
+                    }
+                }
+                .zIndex(2)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
             }
