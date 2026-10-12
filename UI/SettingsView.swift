@@ -212,6 +212,26 @@ import AppKit
                     }
                     .padding(.vertical, 6)
                     .padding(.horizontal, 8)
+                    HStack {
+                        Text(L("shortcuts.nextBoard"))
+                            .font(.system(size: 13))
+                            .frame(width: 80, alignment: .leading)
+                        Spacer()
+                        ShortcutRecorder(shortcut: Binding(get: { settings.shortcuts.nextBoard }, set: { settings.shortcuts.nextBoard = $0 }))
+                            .frame(width: 190, height: 22)
+                    }
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 8)
+                    HStack {
+                        Text(L("shortcuts.previousBoard"))
+                            .font(.system(size: 13))
+                            .frame(width: 80, alignment: .leading)
+                        Spacer()
+                        ShortcutRecorder(shortcut: Binding(get: { settings.shortcuts.previousBoard }, set: { settings.shortcuts.previousBoard = $0 }))
+                            .frame(width: 190, height: 22)
+                    }
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 8)
                 }
             }
             .padding(10)

@@ -6,17 +6,35 @@ public struct PrivacySettings: Codable, Equatable {
     public init(hideOnScreenShare: Bool = true) { self.hideOnScreenShare = hideOnScreenShare }
 }
 
-// 快捷键设置：展示面板、快速粘贴、栈切换、纯文本粘贴
+// 快捷键设置：展示面板、快速粘贴、栈切换、纯文本粘贴与分类切换
 public struct Shortcuts: Codable, Equatable {
     public var showPanel: String
     public var quickPaste: [String]
     public var stackToggle: String
     public var pastePlainText: String
-    public init(showPanel: String = "shift+cmd+p", quickPaste: [String] = ["cmd+1","cmd+2","cmd+3","cmd+4","cmd+5","cmd+6","cmd+7","cmd+8","cmd+9"], stackToggle: String = "shift+cmd+c", pastePlainText: String = "shift+return") {
+    public var nextBoard: String
+    public var previousBoard: String
+    public init(showPanel: String = "shift+cmd+p", quickPaste: [String] = ["cmd+1","cmd+2","cmd+3","cmd+4","cmd+5","cmd+6","cmd+7","cmd+8","cmd+9"], stackToggle: String = "shift+cmd+c", pastePlainText: String = "shift+return", nextBoard: String = "ctrl+tab", previousBoard: String = "shift+ctrl+tab") {
         self.showPanel = showPanel
         self.quickPaste = quickPaste
         self.stackToggle = stackToggle
         self.pastePlainText = pastePlainText
+        self.nextBoard = nextBoard
+        self.previousBoard = previousBoard
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case showPanel, quickPaste, stackToggle, pastePlainText, nextBoard, previousBoard
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        showPanel = try c.decodeIfPresent(String.self, forKey: .showPanel) ?? "shift+cmd+p"
+        quickPaste = try c.decodeIfPresent([String].self, forKey: .quickPaste) ?? ["cmd+1","cmd+2","cmd+3","cmd+4","cmd+5","cmd+6","cmd+7","cmd+8","cmd+9"]
+        stackToggle = try c.decodeIfPresent(String.self, forKey: .stackToggle) ?? "shift+cmd+c"
+        pastePlainText = try c.decodeIfPresent(String.self, forKey: .pastePlainText) ?? "shift+return"
+        nextBoard = try c.decodeIfPresent(String.self, forKey: .nextBoard) ?? "ctrl+tab"
+        previousBoard = try c.decodeIfPresent(String.self, forKey: .previousBoard) ?? "shift+ctrl+tab"
     }
 }
 

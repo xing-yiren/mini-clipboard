@@ -39,6 +39,7 @@ final class AppController: ObservableObject {
         panel = PanelWindowController()
         search = SearchService(store: store)
         appSettings = settingsStore.load()
+        panel.setBoardNavigationShortcuts(next: appSettings.shortcuts.nextBoard, previous: appSettings.shortcuts.previousBoard)
         if let bid = Bundle.main.bundleIdentifier { monitor.setIgnoredApps([bid]) }
         monitor.onItemCaptured = { [weak self] item in
             try? self?.store.save(item)
@@ -86,6 +87,8 @@ final class AppController: ObservableObject {
         panel.onArrowRight = { [weak self] in self?.moveSelectionRight() }
         panel.onArrowUp = { [weak self] in self?.moveSelectionUp() }
         panel.onArrowDown = { [weak self] in self?.moveSelectionDown() }
+        panel.onNextBoard = { [weak self] in self?.cycleBoard(by: 1) }
+        panel.onPreviousBoard = { [weak self] in self?.cycleBoard(by: -1) }
         panel.onEnter = { [weak self] formatOverride in self?.confirmSelectionAndPaste(formatOverride: formatOverride) }
         panel.previewService = preview
         panel.onSpace = { [weak self] in
@@ -124,6 +127,9 @@ final class AppController: ObservableObject {
                     self?.appSettings = settings
                 } else {
                     self?.appSettings = self?.settingsStore.load() ?? AppSettings()
+                }
+                if let shortcuts = self?.appSettings.shortcuts {
+                    self?.panel.setBoardNavigationShortcuts(next: shortcuts.nextBoard, previous: shortcuts.previousBoard)
                 }
             }
             .store(in: &cancellables)
@@ -398,6 +404,19 @@ final class AppController: ObservableObject {
     func selectBoard(_ id: UUID) {
         selectedBoardID = id
         refresh()
+    }
+    private func cycleBoard(by offset: Int) {
+        guard !boards.isEmpty else { return }
+        let currentIndex = selectedBoardID.flatMap { id in
+            boards.firstIndex(where: { $0.id == id })
+        } ?? (offset > 0 ? -1 : 0)
+        let nextIndex = (currentIndex + offset + boards.count) % boards.count
+        selectedItemID = nil
+        selectedIDs.removeAll()
+        selectedOrder.removeAll()
+        selectionAnchorID = nil
+        selectionByKeyboard = true
+        selectBoard(boards[nextIndex].id)
     }
     func selectItem(_ item: ClipItem) {
         selectionByKeyboard = false

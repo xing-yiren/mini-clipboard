@@ -141,6 +141,7 @@ final class ShortcutCaptureView: NSTextField {
         case 44: return "/"
         case 45: return "n"
         case 46: return "m"
+        case 48: return "tab"
         default: return ""
         }
     }

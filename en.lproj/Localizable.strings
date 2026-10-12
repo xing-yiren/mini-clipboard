@@ -28,6 +28,8 @@
 "settings.panel.cornerRadius" = "Panel Corner Radius";
 "shortcuts.title" = "Shortcuts";
 "shortcuts.panel" = "Panel";
+"shortcuts.nextBoard" = "Next Board";
+"shortcuts.previousBoard" = "Previous Board";
 "shortcuts.recording" = "Press new shortcut…";
 "about.title" = "About";
 "about.text" = "Open-source. Focused on simple, beautiful, and smooth experience.";
@@ -92,7 +94,7 @@
 "panel.enterAction.paste" = "Direct Paste";
 "panel.enterFormat.plain" = "Plain Text";
 "panel.enterFormat.formatted" = "Keep Formatting";
-"panel.enterAction.help" = "Enter uses defaults; Shift+Enter forces plain text; Option+Enter keeps formatting";
+"panel.enterAction.help" = "Enter uses defaults; Shift+Enter forces plain text; Option+Enter keeps formatting; board shortcuts are configurable in Settings";
 
 "boards.default.displayName" = "Clipboard";
 "boards.favorites.displayName" = "Favorites";

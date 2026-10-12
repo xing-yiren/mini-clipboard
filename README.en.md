@@ -20,6 +20,8 @@ Lightweight, elegant macOS clipboard manager. Capture history, browse by timelin
 - Force Preserved Formatting: `Option+Enter`
 - Quick Preview: Space
 - Move: Arrow keys
+- Next Board: `Control+Tab` (Configurable)
+- Previous Board: `Control+Shift+Tab` (Configurable)
 - Search: Any key
 - Multi-select: `Shift` or `Command` + Click
 

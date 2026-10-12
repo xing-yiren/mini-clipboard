@@ -29,11 +29,19 @@ public final class PanelWindowController: NSObject, NSWindowDelegate, NSTextFiel
     public var onArrowRight: (() -> Void)?
     public var onArrowUp: (() -> Void)?
     public var onArrowDown: (() -> Void)?
+    public var onNextBoard: (() -> Void)?
+    public var onPreviousBoard: (() -> Void)?
     public var onEnter: ((TextFormatMode?) -> Void)?
     public var onSpace: (() -> Void)?
     public var onShown: (() -> Void)?
     public var onQuickPaste: ((Int, Bool) -> Void)?
+    private var nextBoardShortcut = "ctrl+tab"
+    private var previousBoardShortcut = "shift+ctrl+tab"
     private var isSearchActive: Bool = false
+    public func setBoardNavigationShortcuts(next: String, previous: String) {
+        nextBoardShortcut = next
+        previousBoardShortcut = previous
+    }
     public func setSearchActive(_ active: Bool) {
         isSearchActive = active
         if !active {
@@ -357,6 +365,17 @@ public final class PanelWindowController: NSObject, NSWindowDelegate, NSTextFiel
                     return nil
                 }
                 let flags = ev.modifierFlags
+                if !self.isFirstResponderTextInput() && !self.isAnyTextInputActive() && !self.isSearchActive {
+                    let shortcut = ShortcutCaptureView.stringify(ev)
+                    if shortcut == self.previousBoardShortcut {
+                        self.onPreviousBoard?()
+                        return nil
+                    }
+                    if shortcut == self.nextBoardShortcut {
+                        self.onNextBoard?()
+                        return nil
+                    }
+                }
                 if flags.contains(.command) {
                     if !flags.contains(.shift) && !flags.contains(.option) && !flags.contains(.control) {
                         if self.isFirstResponderTextInput() || self.isAnyTextInputActive() || self.isSearchActive { return ev }

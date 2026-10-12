@@ -28,6 +28,8 @@
 "settings.panel.cornerRadius" = "面板圆角";
 "shortcuts.title" = "快捷键";
 "shortcuts.panel" = "面板";
+"shortcuts.nextBoard" = "下个分类";
+"shortcuts.previousBoard" = "上个分类";
 "shortcuts.recording" = "请按新快捷键…";
 "about.title" = "声明";
 "about.text" = "本软件开源，致力于提供简约、好看、丝滑的使用体验。";
@@ -92,7 +94,7 @@
 "panel.enterAction.paste" = "直接粘贴";
 "panel.enterFormat.plain" = "纯文本";
 "panel.enterFormat.formatted" = "保留格式";
-"panel.enterAction.help" = "Enter 使用默认设置；Shift+Enter 强制纯文本；Option+Enter 强制保留格式";
+"panel.enterAction.help" = "Enter 使用默认设置；Shift+Enter 强制纯文本；Option+Enter 强制保留格式；分类切换快捷键可在设置中修改";
 
 "boards.default.displayName" = "剪贴板";
 "boards.favorites.displayName" = "收藏";
