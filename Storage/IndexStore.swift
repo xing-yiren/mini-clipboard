@@ -288,6 +288,10 @@ public final class IndexStore: IndexStoreProtocol {
             if ext.isEmpty {
                 switch item.type { case .image: ext = "png"; case .text: ext = "rtf"; default: ext = "dat" }
             }
+            // 图片以真实内容决定扩展名，避免把 TIFF 等数据存成 .png
+            if item.type == .image, let actual = ImagePayloadService.type(ofFileAt: ref).preferredFilenameExtension {
+                ext = actual
+            }
             let dst = contentDir.appendingPathComponent(item.id.uuidString).appendingPathExtension(ext)
             if (try? FileManager.default.copyItem(at: ref, to: dst)) != nil {
                 var updated = item

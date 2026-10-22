@@ -255,12 +255,13 @@ final class AppController: ObservableObject {
             if let u = URL(string: urlString) { m.addAttribute(.link, value: u, range: NSRange(location: 0, length: (m.string as NSString).length)) }
             return m
         case .image:
-            if let u = item.contentRef, let d = try? Data(contentsOf: u), let img = NSImage(data: d) {
+            if let u = item.contentRef, let d = try? Data(contentsOf: u), let cg = ImagePayloadService.cgImage(from: d) {
                 let att = NSTextAttachment()
-                att.image = img
-                if let tiff = img.tiffRepresentation {
-                    let fw = FileWrapper(regularFileWithContents: tiff)
-                    fw.preferredFilename = "image.tiff"
+                att.image = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
+                // 统一以 PNG 作为附件，避免声明类型与真实数据不一致
+                if let png = ImagePayloadService.encode(cg, as: .png) {
+                    let fw = FileWrapper(regularFileWithContents: png)
+                    fw.preferredFilename = "image.png"
                     att.fileWrapper = fw
                 }
                 let seg = NSMutableAttributedString(attachment: att)
@@ -274,9 +275,9 @@ final class AppController: ObservableObject {
                 if !extLower.isEmpty, let t = UTType(filenameExtension: extLower), t.conforms(to: .image), let d = try? Data(contentsOf: u), let img = NSImage(data: d) {
                     let att = NSTextAttachment()
                     att.image = img
-                    if let tiff = img.tiffRepresentation {
-                        let fw = FileWrapper(regularFileWithContents: tiff)
-                        fw.preferredFilename = "image.tiff"
+                    if let png = ImagePayloadService.encode(img, as: .png) {
+                        let fw = FileWrapper(regularFileWithContents: png)
+                        fw.preferredFilename = "image.png"
                         att.fileWrapper = fw
                     }
                     let seg = NSMutableAttributedString(attachment: att)

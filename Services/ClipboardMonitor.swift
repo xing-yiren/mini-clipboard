@@ -43,6 +43,19 @@ public final class ClipboardMonitor: ClipboardMonitorProtocol {
             DispatchQueue.main.async { self.onItemCaptured?(item) }
             return
         }
+        // 图片优先于文本/HTML/RTF 处理：部分应用（浏览器、Keynote、截图工具等）会同时
+        // 提供 HTML/RTF 描述，此时仍应保存图片本身，否则粘贴时只剩文字或链接。
+        if let payload = imagePayload(from: pb) {
+            let tmp = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString)
+                .appendingPathExtension(payload.fileExtension)
+            try? payload.data.write(to: tmp)
+            var m: [String: String] = [:]
+            if let bid = bundleID { m["bundleID"] = bid }
+            let item = ClipItem(type: .image, contentRef: tmp, text: nil, sourceApp: appName, metadata: m)
+            DispatchQueue.main.async { self.onItemCaptured?(item) }
+            return
+        }
         // 颜色类型
         if types.contains(.color) {
             var m: [String: String] = [:]
@@ -121,18 +134,6 @@ public final class ClipboardMonitor: ClipboardMonitorProtocol {
                 return
             }
         }
-        // 图片类型（写入临时文件保存）
-        if types.contains(.tiff) || types.contains(.png) {
-            if let d = pb.data(forType: .tiff) ?? pb.data(forType: .png) {
-                let tmp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("png")
-                try? d.write(to: tmp)
-                var m: [String: String] = [:]
-                if let bid = bundleID { m["bundleID"] = bid }
-                let item = ClipItem(type: .image, contentRef: tmp, text: nil, sourceApp: appName, metadata: m)
-                DispatchQueue.main.async { self.onItemCaptured?(item) }
-                return
-            }
-        }
         if types.contains(.fileURL) {
             if let urls = pb.readObjects(forClasses: [NSURL.self], options: [NSPasteboard.ReadingOptionKey.urlReadingFileURLsOnly: true]) as? [URL], let u = urls.first {
                 var m: [String: String] = [:]
@@ -185,6 +186,21 @@ public final class ClipboardMonitor: ClipboardMonitorProtocol {
                 return
             }
         }
+    }
+    // 从粘贴板读取图片并按真实格式重新编码，返回落盘数据与匹配的扩展名，
+    // 避免出现扩展名与内容不一致的文件（例如 TIFF 内容存成 .png）。
+    private func imagePayload(from pb: NSPasteboard) -> (data: Data, fileExtension: String)? {
+        for type in [NSPasteboard.PasteboardType.png, .tiff] {
+            guard let raw = pb.data(forType: type) else { continue }
+            if let png = ImagePayloadService.normalize(raw, to: .png) {
+                return (png, "png")
+            }
+            // 无法重编码但系统能识别时，保留原始数据并使用真实扩展名
+            if let actual = ImagePayloadService.detectUTType(of: raw) {
+                return (raw, actual.preferredFilenameExtension ?? "tiff")
+            }
+        }
+        return nil
     }
     private func detectURL(fromString s: String) -> URL? {
         let t = s.trimmingCharacters(in: .whitespacesAndNewlines)

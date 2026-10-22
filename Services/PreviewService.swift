@@ -267,7 +267,11 @@ private struct PreviewContentView: View {
             if let u = URL(string: s) { Link(destination: u) { Text(u.absoluteString).font(.system(size: 13)) } }
             else { Text(s).font(.system(size: 13)) }
         case .image:
-            if let u = item.contentRef, let img = NSImage(contentsOf: u) {
+            // 历史数据可能是“TIFF 内容 + .png 扩展名”，用 ImageIO 按真实内容解码
+            if let u = item.contentRef,
+               let d = try? Data(contentsOf: u),
+               let cg = ImagePayloadService.cgImage(from: d) {
+                let img = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
                 Image(nsImage: img).resizable().aspectRatio(contentMode: .fit).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ZStack { RoundedRectangle(cornerRadius: 8).fill(Color.secondary.opacity(0.12)); Image(systemName: "photo").font(.system(size: 36)).foregroundColor(.secondary) }.frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -280,8 +284,10 @@ private struct PreviewContentView: View {
                     if !ext.isEmpty, let t = UTType(filenameExtension: ext) { return t.conforms(to: .image) }
                     return false
                 }()
-                if isImage, let img = NSImage(contentsOf: u) {
-                    Image(nsImage: img)
+                if isImage,
+                   let d = try? Data(contentsOf: u),
+                   let cg = ImagePayloadService.cgImage(from: d) {
+                    Image(nsImage: NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height)))
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)

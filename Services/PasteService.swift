@@ -72,7 +72,9 @@ public final class PasteService: PasteServiceProtocol {
             pb.setString(plainText(for: item), forType: .string)
             return .plainText
         case .image:
-            if let u = item.contentRef, let d = try? Data(contentsOf: u) { pb.setData(d, forType: .png) }
+            if let u = item.contentRef, let d = try? Data(contentsOf: u) {
+                writeImage(d, to: pb)
+            }
             return format
         case .file:
             if let u = item.contentRef { pb.setString(u.absoluteString, forType: .fileURL) }
@@ -80,6 +82,30 @@ public final class PasteService: PasteServiceProtocol {
         case .color:
             pb.setString(plainText(for: item), forType: .string)
             return .plainText
+        }
+    }
+
+    // 将图片写入粘贴板。历史数据中可能保存了“内容为 TIFF、扩展名为 .png”的图片，
+    // 若直接以 public.png 声明写入，严格的接收方会解析失败。这里按真实内容识别格式：
+    // PNG 直接写入；其它格式（TIFF/HEIC/JPEG 等）重编码为 PNG 后写入，同时附带 TIFF
+    // 供不支持 PNG 的应用使用。
+    private func writeImage(_ data: Data, to pasteboard: NSPasteboard) {
+        if let actual = ImagePayloadService.detectUTType(of: data), actual == .png {
+            pasteboard.setData(data, forType: .png)
+            return
+        }
+        if let png = ImagePayloadService.normalize(data, to: .png) {
+            pasteboard.setData(png, forType: .png)
+            if let actual = ImagePayloadService.detectUTType(of: data), actual == .tiff {
+                pasteboard.setData(data, forType: .tiff)
+            } else if let tiff = ImagePayloadService.encode(data, as: .tiff) {
+                pasteboard.setData(tiff, forType: .tiff)
+            }
+            return
+        }
+        // 无法识别时按扩展名回退，至少保证写入的类型与数据一致
+        if let actual = ImagePayloadService.detectUTType(of: data) {
+            pasteboard.setData(data, forType: NSPasteboard.PasteboardType(actual.identifier))
         }
     }
 
