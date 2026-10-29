@@ -13,6 +13,12 @@ private struct ContainerFramePreferenceKey: PreferenceKey {
     static var defaultValue: CGRect = .zero
     static func reduce(value: inout CGRect, nextValue: () -> CGRect) { value = nextValue() }
 }
+/// 选中项与列表顺序的组合签名：两者任一变化都需要同步滚动位置。
+private struct SelectionSignature: Equatable {
+    let id: UUID?
+    let itemIDs: [UUID]
+}
+
 public struct HistoryTimelineView: View {
     public let items: [ClipItem]
     public let boards: [Pinboard]
@@ -150,8 +156,10 @@ public struct HistoryTimelineView: View {
             }
             .onPreferenceChange(ItemFramePreferenceKey.self) { v in itemFrames = v }
             .onPreferenceChange(ContainerFramePreferenceKey.self) { v in containerFrame = v }
-            .onValueChange(of: selectedItemID) { id in
-                if let id, let idx = items.firstIndex(where: { $0.id == id }) {
+            .onValueChange(of: SelectionSignature(id: selectedItemID, itemIDs: items.map(\.id))) { signature in
+                // 召唤面板时“最新条目 + 列表顺序”会同时更新，因此不能只监听选中项；
+                // 否则键盘导航（索引随之变化）或重新召唤时不会滚动到可见区域。
+                if let id = signature.id, let idx = items.firstIndex(where: { $0.id == id }) {
                     displayedCount = min(items.count, max(displayedCount, idx + 1))
                     if scrollOnSelection && shouldScroll(to: id) {
                         withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(id, anchor: .center) }

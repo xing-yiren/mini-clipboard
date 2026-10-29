@@ -81,7 +81,7 @@ final class AppController: ObservableObject {
         }
         panel.onHideSearchPopover = { [weak self] in self?.searchPopoverVisible = false }
         panel.onShown = { [weak self] in
-            self?.selectFirstItemIfNeeded()
+            self?.selectNewestItemOnShow()
         }
         panel.onArrowLeft = { [weak self] in self?.moveSelectionLeft() }
         panel.onArrowRight = { [weak self] in self?.moveSelectionRight() }
@@ -173,6 +173,8 @@ final class AppController: ObservableObject {
         let actualFormat = paste.paste(item, format: format ?? appSettings.defaultTextFormat)
         store.moveToFront(item.id)
         refresh()
+        // 记住本次使用的条目，下次召唤时选框仍停留在最新使用的位置
+        selectedItemID = item.id
         panel.hide()
         let msg: String
         if item.type == .image || item.type == .file {
@@ -423,8 +425,14 @@ final class AppController: ObservableObject {
         selectionByKeyboard = false
         selectedItemID = item.id
     }
-    private func selectFirstItemIfNeeded() {
-        if selectedItemID == nil { selectedItemID = items.first?.id }
+    // 每次召唤面板都把选框复位到最新复制/剪切的位置。
+    // 列表本身按 copiedAt 倒序排列，因此“最新”即列表第一项；
+    // 点击粘贴会把该条目移到最前，下次召唤同样落在刚用过的条目上。
+    private func selectNewestItemOnShow() {
+        selectionByKeyboard = false
+        clearSelection()
+        selectionAnchorID = items.first?.id
+        selectedItemID = items.first?.id
     }
     private func currentIndex() -> Int? {
         guard let id = selectedItemID, let idx = items.firstIndex(where: { $0.id == id }) else { return nil }
@@ -510,6 +518,7 @@ final class AppController: ObservableObject {
             paste.directPaste(item, format: format ?? appSettings.defaultTextFormat)
             store.moveToFront(item.id)
             refresh()
+            selectedItemID = item.id
         } else {
             showAccessibilityAlert()
         }
