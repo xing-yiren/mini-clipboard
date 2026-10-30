@@ -64,6 +64,9 @@ public struct HistoryTimelineView: View {
     private var displayedItems: [ClipItem] { Array(items.prefix(displayedCount)) }
     @State private var itemFrames: [UUID: CGRect] = [:]
     @State private var containerFrame: CGRect = .zero
+    /// 待执行的一次性滚动目标；卡片布局完成后（frame 回报）再滚动，避免召唤面板时
+    /// 列表刚更新、卡片还没有 frame 而没有滚到最新条目。
+    @State private var pendingScrollID: UUID?
     public var body: some View {
         ScrollViewReader { proxy in
             Group {
@@ -161,14 +164,30 @@ public struct HistoryTimelineView: View {
                 // 否则键盘导航（索引随之变化）或重新召唤时不会滚动到可见区域。
                 if let id = signature.id, let idx = items.firstIndex(where: { $0.id == id }) {
                     displayedCount = min(items.count, max(displayedCount, idx + 1))
-                    if scrollOnSelection && shouldScroll(to: id) {
-                        withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(id, anchor: .center) }
+                    if scrollOnSelection {
+                        // 召唤面板时列表可能刚被替换，卡片尚未完成布局（还拿不到 frame），
+                        // 这里记下一次性滚动目标，真正滚动放到卡片 frame 回报之后再做。
+                        pendingScrollID = id
+                        scrollPendingSelection(to: id, proxy: proxy)
                     }
                     updateAnchorRect()
                 }
             }
-            .onValueChange(of: itemFrames) { _ in updateAnchorRect() }
+            .onValueChange(of: itemFrames) { _ in
+                if let pending = pendingScrollID {
+                    scrollPendingSelection(to: pending, proxy: proxy)
+                }
+                updateAnchorRect()
+            }
         }
+    }
+    /// 若目标卡片已布局且不在可视区域内就滚动过去；已可见或尚未布局时保留待滚动状态。
+    private func scrollPendingSelection(to id: UUID, proxy: ScrollViewProxy) {
+        // 等卡片和滚动容器都完成布局后再判断，否则会把“尚未布局”误判为需要滚动
+        guard itemFrames[id] != nil, containerFrame != .zero else { return }
+        pendingScrollID = nil
+        guard shouldScroll(to: id) else { return }
+        withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(id, anchor: .center) }
     }
     private func shouldScroll(to id: UUID) -> Bool {
         guard let f = itemFrames[id], containerFrame != .zero else { return true }

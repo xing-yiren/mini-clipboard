@@ -7,6 +7,7 @@ import Carbon.HIToolbox
 // 面板窗口控制器：创建半透明浮层窗口并处理显示/隐藏与定位
 public final class PanelWindowController: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     private var window: NSWindow?
+    public var isVisible: Bool { window?.isVisible == true }
     private var rootView: AnyView?
     private var outsideClickMonitor: Any?
     private var keyMonitor: Any?

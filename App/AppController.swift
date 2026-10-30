@@ -156,6 +156,7 @@ final class AppController: ObservableObject {
                 }
             }
             items = Array(r.prefix(200))
+            syncSelectionToNewestIfNeeded()
         } else {
             let currentQuery = query
             let currentFilters = filters
@@ -164,6 +165,9 @@ final class AppController: ObservableObject {
                 let result = self.search.search(currentQuery, filters: currentFilters, limit: 200)
                 DispatchQueue.main.async { [weak self] in
                     self?.items = result
+                    // 搜索结果异步回到主线程，可能晚于面板的 onShown，
+                    // 导致召唤面板时“选中最新项”只针对旧列表生效。
+                    self?.syncSelectionToNewestIfNeeded()
                 }
             }
         }
@@ -429,10 +433,33 @@ final class AppController: ObservableObject {
     // 列表本身按 copiedAt 倒序排列，因此“最新”即列表第一项；
     // 点击粘贴会把该条目移到最前，下次召唤同样落在刚用过的条目上。
     private func selectNewestItemOnShow() {
+        clearSelection()
+        selectNewestItem()
+    }
+    /// 在列表更新后调用：若当前选中项因列表刷新而“消失”（例如文案筛选、
+    /// 异步搜索结果替换），立即把选框落到最新条目上，避免保留一个不存在的选中项。
+    private func syncSelectionToNewestIfNeeded() {
+        guard panel.isVisible else { return }
+        if let id = selectedItemID, items.contains(where: { $0.id == id }) { return }
+        if items.isEmpty { selectedItemID = nil; selectionAnchorID = nil; return }
         selectionByKeyboard = false
         clearSelection()
-        selectionAnchorID = items.first?.id
-        selectedItemID = items.first?.id
+        selectNewestItem()
+    }
+    /// 把选框落到列表第一项（按 copiedAt 倒序，即最新复制/剪切的内容），
+    /// 并保持复选锚点同步。
+    private func selectNewestItem() {
+        guard let newest = items.first else {
+            selectedItemID = nil
+            selectionAnchorID = nil
+            return
+        }
+        selectedItemID = newest.id
+        selectionAnchorID = newest.id
+        // 预览面板打开时同步切换到新选中条目的内容
+        if panel.previewService?.isVisible() == true {
+            panel.showPreview(newest)
+        }
     }
     private func currentIndex() -> Int? {
         guard let id = selectedItemID, let idx = items.firstIndex(where: { $0.id == id }) else { return nil }
